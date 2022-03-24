@@ -1,11 +1,25 @@
 module MHDNavierstokes
 
-export .....
+export 
+	UᵢUpdate!,
+	BᵢUpdate!,
+
+	MHDcalcN_advection!,
+	MHDupdatevars!
 
 #1. generalized U,B solver finish
-#2. ? advection function 
+#2. ? advection function finished
 
-using ...
+using
+  CUDA,
+  Reexport,
+  DocStringExtensions
+
+@reexport using FourierFlows
+
+using LinearAlgebra: mul!, ldiv!
+using FourierFlows: parsevalsum
+
 
 # δ function
 δ(a::Int,b::Int) = ( a == b ? 1 : 0 );
@@ -40,7 +54,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   else
 
-  	@warn "Warning : Unknown direction declerad"
+  	@warn "Warning : Unknown direction is declerad"
 
   end
 
@@ -107,7 +121,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
 	else
 
-		@warn "Warning : Unknown direction declerad"
+		@warn "Warning : Unknown direction is declerad"
 
 	end
 
@@ -141,7 +155,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
 end
 
-function calcN_advection!(N, sol, t, clock, vars, params, grid)
+function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Fourier Conponment
   @. vars.uxh = sol[:, :, :, params.ux_ind];
@@ -173,7 +187,7 @@ function calcN_advection!(N, sol, t, clock, vars, params, grid)
   return nothing
 end
 
-function updatevars!(prob)
+function MHDupdatevars!(prob)
   vars, grid, sol, params = prob.vars, prob.grid, prob.sol, prob.params
   
   dealias!(sol, grid)

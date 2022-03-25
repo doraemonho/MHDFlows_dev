@@ -79,7 +79,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
             mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
             mul!(bᵢbⱼh, grid.rfftplan, bᵢbⱼ);
             
-            #preform the actual calculation
+            #perform the actual calculation
             @. ∂uᵢh∂t += -im*kᵢ*(δ(α,j)-kₐ*kⱼ*k⁻²)*(uᵢuⱼh-bᵢbⱼh);
             
         end
@@ -103,21 +103,21 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 		uᵢ  = vars.ux;
 		bᵢ  = vars.bx; 
 		bᵢh = vars.bxh; 
-		∂B_ih∂t = @view N[:,:,:,params.bx_ind];
+		∂Bᵢh∂t = @view N[:,:,:,params.bx_ind];
 
 	elseif direction == "y"
 
 		uᵢ  = vars.uy;
 		bᵢ  = vars.by; 
 		bᵢh = vars.byh; 
-		∂B_ih∂t = @view N[:,:,:,params.by_ind];
+		∂Bᵢh∂t = @view N[:,:,:,params.by_ind];
 
 	elseif direction == "z"
 
 		uᵢ  = vars.uz;
 		bᵢ  = vars.bz; 
 		bᵢh = vars.bzh; 
-		∂B_ih∂t = @view N[:,:,:,params.bz_ind];
+		∂Bᵢh∂t = @view N[:,:,:,params.bz_ind];
 
 	else
 
@@ -125,7 +125,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
 	end
 
-    @. ∂B_ih∂t*= 0;
+    @. ∂Bᵢh∂t*= 0;
     
     #Compute the first term, im ∑_j k_j*(b_iu_j - u_ib_j)
     for (bⱼ,uⱼ,kⱼ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
@@ -145,7 +145,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
         mul!(uᵢbⱼh, grid.rfftplan, uᵢbⱼ);
         mul!(bᵢuⱼh, grid.rfftplan, bᵢuⱼ);
         
-        @. ∂B_ih∂t += -im*kⱼ*(bᵢuⱼh - uᵢbⱼh);
+        @. ∂Bᵢh∂t += -im*kⱼ*(bᵢuⱼh - uᵢbⱼh);
     end
     
     #Compute the diffusion term  - ηk^2 B_i

@@ -1,11 +1,11 @@
 module MHDFlows
 
 using 
-	CUDA,
-	Statisctics,
-	SpecialFunctions,
-	Reexport,
-	DocStringExtensions
+  CUDA,
+  Statisctics,
+  SpecialFunctions,
+  Reexport,
+  DocStringExtensions
 
 @reexport using FourierFlows
 

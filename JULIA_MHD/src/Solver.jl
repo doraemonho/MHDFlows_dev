@@ -175,14 +175,14 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   ldiv!(vars.bz, grid.rfftplan, deepcopy(vars.bzh))  
   
   #Update V Advection
-  Ux_Update!(N, sol, t, clock, vars, params, grid)  
-  Uy_Update!(N, sol, t, clock, vars, params, grid)
-  Uz_Update!(N, sol, t, clock, vars, params, grid)
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
   
-  #Update B Advection  
-  Bx_Update!(N, sol, t, clock, vars, params, grid)
-  By_Update!(N, sol, t, clock, vars, params, grid)
-  Bz_Update!(N, sol, t, clock, vars, params, grid)
+  #Update B Advection
+  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
+  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")  
   
   return nothing
 end

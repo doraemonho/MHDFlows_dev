@@ -2,7 +2,10 @@ module pgen
 #Problem Gernerator for setting Up the problem 
 
 export MHDProblem,
-       HDProblem
+       HDProblem,
+       MHDcalcN,
+       HDcalcN
+
 
 nothingfunction(args...) = nothing;
 

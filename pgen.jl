@@ -1,13 +1,13 @@
 module pgen
 #Problem Gernerator for setting Up the problem 
 
-
+#testing!
 
 nothingfunction(args...) = nothing;
 
 function MHDProblem(dev::Device=CPU();
   # Numerical parameters
-                nx = 64,
+                nx = 6s4,
                 ny = nx,
                 nz = nx,
                 Lx = 2π,

@@ -1,8 +1,6 @@
 module pgen
 #Problem Gernerator for setting Up the problem 
 
-#testing!
-
 nothingfunction(args...) = nothing;
 
 function MHDProblem(dev::Device=CPU();

@@ -2,7 +2,7 @@ module data
 	#Setting up the data structure
 
 export SetMHDVars,
-	   SetHDVars
+       SetHDVars
 
 abstract type MHDVars <: AbstractVars end
 abstract type HDVars <: AbstractVars end
@@ -52,21 +52,21 @@ end
 struct MHDParams{T} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
-     ν :: T
+    ν :: T
   "small-scale (hyper)-viscosity coefficient fro b"
-     η :: T
+    η :: T
   "(hyper)-viscosity order, `nν```≥ 1``"
     nν :: Int
 
   "Array Indexing for velocity"
-  ux_ind :: Int
-  uy_ind :: Int
-  uz_ind :: Int
+    ux_ind :: Int
+    uy_ind :: Int
+    uz_ind :: Int
     
-    "Array Indexing for B-field"
-  bx_ind :: Int
-  by_ind :: Int
-  bz_ind :: Int
+  "Array Indexing for B-field"
+    bx_ind :: Int
+    by_ind :: Int
+    bz_ind :: Int
     
 end
 

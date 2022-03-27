@@ -20,5 +20,5 @@ The MHD Solver could either run on CPU or GPU. The scalability is same as Fourie
 ## Example
 Two examples were set up to illustrate the workflow of using this package. See `example\` for more detail. 
 
-## Cite
+## Citing
 A paper can be cited elsewhere in the future : ). Feel free to cite the github page right now. 

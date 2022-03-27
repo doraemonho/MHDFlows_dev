@@ -6,8 +6,6 @@ export
 	MHDcalcN_advection!,
 	MHDupdatevars!
 
-#1. generalized U,B solver finish
-#2. ? advection function finished
 
 using
   CUDA,
@@ -59,35 +57,27 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   @. ∂uᵢh∂t*= 0;
 
-  #for (bᵢ,uᵢ,kᵢ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
-for k_i = 1:3
-  bᵢ = (k_i==1  ?  vars.bx : (k_i==2  ? vars.by : vars.bz));
-  uᵢ = (k_i==1  ?  vars.ux : (k_i==2  ? vars.uy : vars.uz));
-  kᵢ = (k_i==1  ?  grid.kr : (k_i==2  ?  grid.l : grid.m));
-        #for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
-    for j = 1:3
-            bⱼ = (j==1  ?  vars.bx : (j==2  ?  vars.by : vars.bz));
-            uⱼ = (j==1  ?  vars.ux : (j==2  ?  vars.uy : vars.uz));
-            kⱼ = (j==1  ?  grid.kr : (j==2  ?   grid.l : grid.m));
-            
-            # Initialization 
-            @. vars.nonlin1 *= 0;
-            @. vars.nonlin2 *= 0;
-            uᵢuⱼ  = vars.nonlin1;    
-            bᵢbⱼ  = vars.nonlin2; 
-            uᵢuⱼh = vars.nonlinh1;
-            bᵢbⱼh = vars.nonlinh2;
-            
-            # Pre-Calculation in Real Space
-            @. uᵢuⱼ = uᵢ*uⱼ;
-            @. bᵢbⱼ = bᵢ*bⱼ;;
+  for (bᵢ,uᵢ,kᵢ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
+        for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
 
-            # Fourier transform 
-            mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
-            mul!(bᵢbⱼh, grid.rfftplan, bᵢbⱼ);
-            
-            #perform the actual calculation
-            @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*(uᵢuⱼh-bᵢbⱼh);
+          # Initialization 
+          @. vars.nonlin1 *= 0;
+          @. vars.nonlin2 *= 0;
+          uᵢuⱼ  = vars.nonlin1;    
+          bᵢbⱼ  = vars.nonlin2; 
+          uᵢuⱼh = vars.nonlinh1;
+          bᵢbⱼh = vars.nonlinh2;
+          
+          # Pre-Calculation in Real Space
+          @. uᵢuⱼ = uᵢ*uⱼ;
+          @. bᵢbⱼ = bᵢ*bⱼ;;
+
+          # Fourier transform 
+          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
+          mul!(bᵢbⱼh, grid.rfftplan, bᵢbⱼ);
+          
+          #perform the actual calculation
+          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*(uᵢuⱼh-bᵢbⱼh);
             
         end
     end
@@ -101,10 +91,11 @@ end
 # B function
 function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
-	#To Update B_i, we have two terms:
+	#To Update B_i, we have two terms to compute:
 	# ∂B_i/∂t = im ∑_j k_j*(b_iu_j - u_ib_j)  - η k^2 B_i
 	#We split two terms for sparating the computation.
 
+  # declare the var u_i, b_i for computation
 	if direction == "x"
 
 		uᵢ  = vars.ux;

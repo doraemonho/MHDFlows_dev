@@ -15,6 +15,11 @@ export SetMHDVars,
        MHDParams,
        HDParams
 
+# ----------
+# Parameters and data structure for HD and MHD problem
+# ----------
+
+
 abstract type MHDVars <: AbstractVars end
 abstract type HDVars <: AbstractVars end
 
@@ -64,7 +69,7 @@ struct MHDParams{T} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: T
-  "small-scale (hyper)-viscosity coefficient fro b"
+  "small-scale (hyper)-viscosity coefficient for b"
     η :: T
   "(hyper)-viscosity order, `nν```≥ 1``"
     nν :: Int

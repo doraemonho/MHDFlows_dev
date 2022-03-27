@@ -1,4 +1,4 @@
-# MHD Flows
+# MHDFlows.jl
 
 Magnetohydrodynamic(MHD) pseudospectral solvers written in julia language with <a href="http://github.com/FourierFlows/FourierFlows.jl">FourierFlows.jl</a>. 
 

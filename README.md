@@ -21,7 +21,7 @@ The MHD Solver could either run on CPU or GPU. The scalability is same as Fourie
 Two examples were set up to illustrate the workflow of using this package. See `example\` for more detail. 
 
 ## Developer
-MHD is developed by [Ka Wai HO@UW-Madison Astronomy](https://scholar.google.com/citations?user=h2j8wbYAAAAJ&hl=en).
+MHDFlows is developed by [Ka Wai HO@UW-Madison Astronomy](https://scholar.google.com/citations?user=h2j8wbYAAAAJ&hl=en).
 
 ## Citing
 A paper can be cited elsewhere in the future : ). Feel free to cite the github page right now. 

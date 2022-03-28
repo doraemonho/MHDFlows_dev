@@ -201,7 +201,7 @@ function Equation_with_forcing(dev,params::MHDParams, grid::AbstractGrid)
   return FourierFlows.Equation(L,MHDcalcN!, grid)
 end
 
-function Equation_with_forcing(dev,params::MHDParams, grid::AbstractGrid)
+function Equation_with_forcing(dev,params::HDParams, grid::AbstractGrid)
   T = eltype(grid)
   L = zeros(dev, T, (grid.nkr,grid.nm,grid.nk, 6));
     

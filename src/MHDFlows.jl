@@ -14,10 +14,9 @@ include("Solver.jl")
 include("datastructure.jl")
 include("integrator.jl")
 
-
-#@reexport using MHDFlows.pgen
-#@reexport using MHDFlows.solver
-#@reexport using MHDFlows.datastructure
-#@reexport using MHDFlows.integrator
+@reexport using MHDFlows.pgen
+@reexport using MHDFlows.MHDSolver
+@reexport using MHDFlows.datastructure
+@reexport using MHDFlows.integrator
 
 end

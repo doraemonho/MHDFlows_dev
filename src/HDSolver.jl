@@ -39,7 +39,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   	k⁻²  = grid.invKrsq;
   	uᵢh  = vars.uyh;
   	∂uᵢh∂t = @view N[:,:,:,params.uy_ind];
-
+    
   elseif direction == "z"
 
   	a    = 3;

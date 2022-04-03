@@ -1,4 +1,5 @@
 # MHDFlows.jl
+![Julia flow](img/TG_Instability.gif)
 
 Three Dimensional Magnetohydrodynamic(MHD) pseudospectral solvers written in julia language with <a href="http://github.com/FourierFlows/FourierFlows.jl">FourierFlows.jl</a>. 
 

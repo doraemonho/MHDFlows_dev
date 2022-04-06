@@ -164,12 +164,12 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   @. vars.bzh = sol[:, :, :, params.bz_ind];
 
   #Update V + B Real Conponment
-  ldiv!(vars.ux, grid.rfftplan, vars.uxh)
-  ldiv!(vars.uy, grid.rfftplan, vars.uyh)
-  ldiv!(vars.uz, grid.rfftplan, vars.uzh)
-  ldiv!(vars.bx, grid.rfftplan, vars.bxh)
-  ldiv!(vars.by, grid.rfftplan, vars.byh)
-  ldiv!(vars.bz, grid.rfftplan, vars.bzh)  
+  ldiv!(vars.ux, grid.rfftplan, deepcopy(vars.uxh))
+  ldiv!(vars.uy, grid.rfftplan, deepcopy(vars.uyh))
+  ldiv!(vars.uz, grid.rfftplan, deepcopy(vars.uzh))
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(vars.bxh))
+  ldiv!(vars.by, grid.rfftplan, deepcopy(vars.byh))
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(vars.bzh))  
   
   #Update V Advection
   UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")

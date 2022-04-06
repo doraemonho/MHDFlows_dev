@@ -103,7 +103,6 @@ function MHDProblem(dev::Device=CPU();
 end
 
 
-
 """
 function HDProblem(dev::Device=CPU();
   # Numerical parameters

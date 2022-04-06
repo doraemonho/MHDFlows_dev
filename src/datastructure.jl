@@ -84,8 +84,7 @@ struct MHDParams{T} <: AbstractParams
     by_ind :: Int
     bz_ind :: Int
   "function that calculates the Fourier transform of the forcing, ``F̂``"
-    calcF! :: Function
-    
+    calcF! :: Function 
 end
 
 struct HVars{Aphys, Atrans} <: MHDVars
@@ -135,7 +134,6 @@ struct HDParams{T} <: AbstractParams
     calcF! :: Function
     
 end
-
 
 function SetMHDVars(::Dev, grid::AbstractGrid) where Dev
   T = eltype(grid)

@@ -21,6 +21,7 @@ using FourierFlows: parsevalsum
 # δ function
 δ(a::Int,b::Int) = ( a == b ? 1 : 0 );
 
+
 function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   if direction == "x"
@@ -59,27 +60,24 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   for (bᵢ,uᵢ,kᵢ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
         for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
 
-          #We split the computation into two parts to save memory
-          @. vars.nonlin1  *= 0;
-          @. vars.nonlinh1 *= 0;
-          uᵢuⱼ  = vars.nonlin1;  
+          # Initialization 
+          @. vars.nonlin1 *= 0;
+          @. vars.nonlin2 *= 0;
+          uᵢuⱼ  = vars.nonlin1;    
+          bᵢbⱼ  = vars.nonlin2; 
           uᵢuⱼh = vars.nonlinh1;
+          bᵢbⱼh = vars.nonlinh2;
+          
+          # Pre-Calculation in Real Space
           @. uᵢuⱼ = uᵢ*uⱼ;
-          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
-
-          # Perform the actual calculation
-          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
-
-
-          @. vars.nonlin1  *= 0;
-          @. vars.nonlinh1 *= 0;
-          bᵢbⱼ  = vars.nonlin1; 
-          bᵢbⱼh = vars.nonlinh1;
           @. bᵢbⱼ = bᵢ*bⱼ;;
+
+          # Fourier transform 
+          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
           mul!(bᵢbⱼh, grid.rfftplan, bᵢbⱼ);
           
-          # Perform the actual calculation
-          @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼh;
+          #perform the actual calculation
+          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*(uᵢuⱼh-bᵢbⱼh);
             
         end
     end
@@ -95,7 +93,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
 	#To Update B_i, we have two terms to compute:
 	# ∂B_i/∂t = im ∑_j k_j*(b_iu_j - u_ib_j)  - η k^2 B_i
-	#We split it into two part for sparating the computation.
+	#We split two terms for sparating the computation.
 
   # declare the var u_i, b_i for computation
 	if direction == "x"
@@ -131,25 +129,21 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     for (bⱼ,uⱼ,kⱼ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
 
         # Initialization 
-        @. vars.nonlin1  *= 0;
-        @. vars.nonlinh1 *= 0;
-        uᵢbⱼ  = vars.nonlin1;        
+        @. vars.nonlin1 *= 0;
+        @. vars.nonlin2 *= 0;
+        uᵢbⱼ  = vars.nonlin1;    
+        bᵢuⱼ  = vars.nonlin2; 
         uᵢbⱼh = vars.nonlinh1;
-        # Perform Computation in Real space
-        @. uᵢbⱼ = uᵢ*bⱼ;
-        mul!(uᵢbⱼh, grid.rfftplan, uᵢbⱼ);
-        # Actual Advection
-        @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼh;
+        bᵢuⱼh = vars.nonlinh2;
         
-
-        @. vars.nonlin1  *= 0;
-        @. vars.nonlinh1 *= 0;    
-        bᵢuⱼ  = vars.nonlin1; 
-        bᵢuⱼh = vars.nonlinh1;
+        # Pre-Calculation in Real Space
+        @. uᵢbⱼ = uᵢ*bⱼ;
         @. bᵢuⱼ = bᵢ*uⱼ;
+        # Fourier transform back to spectral space
+        mul!(uᵢbⱼh, grid.rfftplan, uᵢbⱼ);
         mul!(bᵢuⱼh, grid.rfftplan, bᵢuⱼ);
-        @. ∂Bᵢh∂t += -im*kⱼ*bᵢuⱼh;
-
+        
+        @. ∂Bᵢh∂t += -im*kⱼ*(bᵢuⱼh - uᵢbⱼh);
     end
     
     #Compute the diffusion term  - ηk^2 B_i

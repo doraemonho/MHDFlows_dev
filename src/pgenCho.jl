@@ -36,13 +36,14 @@ function ChoProblem(dev::Device=CPU();
            stepper = "RK4",
              calcF = nothingfunction,
                 A0 = 1.0,
+          k_factor = 1.0,
   # Float type and dealiasing
                  T = Float32)
 
   grid = ThreeDGrid(dev, nx, Lx, ny, Ly, nz, Lz; T=T)
 
   # set up the function for this three
-  fo,s1,s2 = Setupfos1s2(grid);
+  fo,s1,s2 = Setupfos1s2(grid;k_factor=k_factor);
   params = ChoParams{T}(ν, η, nν, 1, 2, 3, 4, 5, 6, calcF, fo, s1,s2)
 
   vars = SetChoVars(dev, grid);
@@ -86,14 +87,6 @@ struct ChoVars{Aphys, Atrans, Avars1, Avars2} <: MHDVars
      nonlin1 :: Aphys
     "Fourier transform of Non-linear term"
     nonlinh1 :: Atrans
-    "Non-linear term 2"
-     nonlin2 :: Aphys
-    "Fourier transform of Non-linear term"
-    nonlinh2 :: Atrans
-    "Non-linear term 3"
-     nonlin3 :: Aphys
-    "Fourier transform of Non-linear term"
-    nonlinh3 :: Atrans
 
     # Forcing vars
     "Forcing Amplitude"
@@ -134,57 +127,57 @@ end
 function SetChoVars(::Dev, grid::AbstractGrid) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz nonlin1 nonlin2 nonlin3
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz nonlin1
   @devzeros Dev T (22) Φ1 Φ2
   @devzeros Dev T (1) A
-  @devzeros Dev Complex{T} (grid.nkr, grid.nm, grid.nl) uxh uyh uzh bxh byh bzh nonlinh1 nonlinh2 nonlinh3
+  @devzeros Dev Complex{T} (grid.nkr, grid.nm, grid.nl) uxh uyh uzh bxh byh bzh nonlinh1
   
   ChoVars( ux,  uy,  uz,  bx,  by,  bz,
           uxh, uyh, uzh, bxh, byh, bzh,
-          nonlin1, nonlinh1, nonlin2, nonlinh2, nonlin3, nonlinh3,
+          nonlin1, nonlinh1,
           A,  Φ1, Φ2);
 end
 
 function Setupfos1s2(grid::AbstractGrid;k_factor = 1)
-	# The 22 conponment 
-	fox,foy,foz = zeros(Int32,22),zeros(Int32,22),zeros(Int32,22)
-	fox[1]=  2; foy[1]=  1; foz[1]=  1;
-	fox[2]=  2; foy[2]=  1; foz[2]= -1;
-	fox[3]=  2; foy[3]= -1; foz[3]=  1;
-	fox[4]=  2; foy[4]= -1; foz[4]= -1;
-	fox[5]=  1; foy[5]=  2; foz[5]=  1;
-	fox[6]=  1; foy[6]=  2; foz[6]= -1;
-	fox[7]=  1; foy[7]=  1; foz[7]=  2;
-	fox[8]=  1; foy[8]=  1; foz[8]= -2;
-	fox[9]=  1; foy[9]= -1; foz[9]=  2;
-	fox[1]=  1; foy[10]=-1; foz[10]=-2;
-	fox[11]= 1; foy[11]=-2; foz[11]= 1;
-	fox[12]= 1; foy[12]=-2; foz[12]=-1;
-	fox[13]= 2; foy[13]= 0; foz[13]= 0;
-	fox[14]= 3; foy[14]= 0; foz[14]= 0;
-	fox[15]= 0; foy[15]= 2; foz[15]= 0;
-	fox[16]= 0; foy[16]= 3; foz[16]= 0;
-	fox[17]= 0; foy[17]= 0; foz[17]= 2;
-	fox[18]= 0; foy[18]= 0; foz[18]= 3;
-	fox[19]= 2; foy[19]= 2; foz[19]= 2;
-	fox[20]= 2; foy[20]= 2; foz[20]=-2;
-	fox[21]= 2; foy[21]=-2; foz[21]= 2;
-	fox[22]= 2; foy[22]=-2; foz[22]=-2;
+  # The 22 conponment 
+  fox,foy,foz = zeros(Int32,22),zeros(Int32,22),zeros(Int32,22)
+  fox[1]=  2; foy[1]=  1; foz[1]=  1;
+  fox[2]=  2; foy[2]=  1; foz[2]= -1;
+  fox[3]=  2; foy[3]= -1; foz[3]=  1;
+  fox[4]=  2; foy[4]= -1; foz[4]= -1;
+  fox[5]=  1; foy[5]=  2; foz[5]=  1;
+  fox[6]=  1; foy[6]=  2; foz[6]= -1;
+  fox[7]=  1; foy[7]=  1; foz[7]=  2;
+  fox[8]=  1; foy[8]=  1; foz[8]= -2;
+  fox[9]=  1; foy[9]= -1; foz[9]=  2;
+  fox[1]=  1; foy[10]=-1; foz[10]=-2;
+  fox[11]= 1; foy[11]=-2; foz[11]= 1;
+  fox[12]= 1; foy[12]=-2; foz[12]=-1;
+  fox[13]= 2; foy[13]= 0; foz[13]= 0;
+  fox[14]= 3; foy[14]= 0; foz[14]= 0;
+  fox[15]= 0; foy[15]= 2; foz[15]= 0;
+  fox[16]= 0; foy[16]= 3; foz[16]= 0;
+  fox[17]= 0; foy[17]= 0; foz[17]= 2;
+  fox[18]= 0; foy[18]= 0; foz[18]= 3;
+  fox[19]= 2; foy[19]= 2; foz[19]= 2;
+  fox[20]= 2; foy[20]= 2; foz[20]=-2;
+  fox[21]= 2; foy[21]=-2; foz[21]= 2;
+  fox[22]= 2; foy[22]=-2; foz[22]=-2;
 
-	fo = zeros(Int32,3,22);
-	fo[1,:] .= k_factor*fox;
-	fo[2,:] .= k_factor*foy;
-	fo[3,:] .= k_factor*foz;
+  fo = zeros(Int32,3,22);
+  fo[1,:] .= k_factor*fox;
+  fo[2,:] .= k_factor*foy;
+  fo[3,:] .= k_factor*foz;
 
-	# Set up vector set s1 s2 that ⊥ k_f
-	s1,s2 = zeros(3,22),zeros(3,22);
-	k_component = 22;
+  # Set up vector set s1 s2 that ⊥ k_f
+  s1,s2 = zeros(3,22),zeros(3,22);
+  k_component = 22;
     for k_i = 1:k_component
-    	# index 1,2,3 -> i,j,k direction
-    	rkx,rky,rkz = fox[k_i],foy[k_i],foz[k_i];
-		ryz = √( rky^2 +rkz^2 );
-		rxyz= √( rkx^2 +rky^2 +rkz^2);
-    	if (ryz == 0.0)
+      # index 1,2,3 -> i,j,k direction
+      rkx,rky,rkz = fox[k_i],foy[k_i],foz[k_i];
+    ryz = √( rky^2 +rkz^2 );
+    rxyz= √( rkx^2 +rky^2 +rkz^2);
+      if (ryz == 0.0)
            s1[1,k_i]=0.0
            s1[2,k_i]=1.0
            s1[3,k_i]=0.0
@@ -192,17 +185,17 @@ function Setupfos1s2(grid::AbstractGrid;k_factor = 1)
            s2[2,k_i]=0.0
            s2[3,k_i]=1.0
        else
-		   s1[1,k_i] =  0.0
-		   s1[2,k_i] =  rkz / ryz
-		   s1[3,k_i] = -rky / ryz
+       s1[1,k_i] =  0.0
+       s1[2,k_i] =  rkz / ryz
+       s1[3,k_i] = -rky / ryz
 
-		   s2[1,k_i] = -ryz / rxyz
-		   s2[2,k_i] =  rkx*rky / rxyz / ryz
-		   s2[3,k_i] =  rkx*rkz / rxyz / ryz
-		end
-	end
+       s2[1,k_i] = -ryz / rxyz
+       s2[2,k_i] =  rkx*rky / rxyz / ryz
+       s2[3,k_i] =  rkx*rkz / rxyz / ryz
+    end
+  end
 
-	return fo,s1,s2;
+  return fo,s1,s2;
 end
 
 function setupChovars!(vars;A0=1.0)

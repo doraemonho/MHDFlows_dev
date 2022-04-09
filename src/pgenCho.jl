@@ -36,14 +36,14 @@ function ChoProblem(dev::Device=CPU();
            stepper = "RK4",
              calcF = nothingfunction,
                 A0 = 1.0,
-          k_factor = 1.0,
+                kf = 1.0,
   # Float type and dealiasing
                  T = Float32)
 
   grid = ThreeDGrid(dev, nx, Lx, ny, Ly, nz, Lz; T=T)
 
   # set up the function for this three
-  fo,s1,s2 = Setupfos1s2(grid;k_factor=k_factor);
+  fo,s1,s2 = Setupfos1s2(grid;kf=kf);
   params = ChoParams{T}(ν, η, nν, 1, 2, 3, 4, 5, 6, calcF, fo, s1,s2)
 
   vars = SetChoVars(dev, grid);
@@ -138,9 +138,26 @@ function SetChoVars(::Dev, grid::AbstractGrid) where Dev
           A,  Φ1, Φ2);
 end
 
-function Setupfos1s2(grid::AbstractGrid;k_factor = 1)
+function Setupfos1s2(grid::AbstractGrid;kf = 15)
   # The 22 conponment 
-  fox,foy,foz = zeros(Int32,22),zeros(Int32,22),zeros(Int32,22)
+  fox,foy,foz = zeros(Int32,22),zeros(Int32,22),zeros(Int32,22);
+  k = 1;
+  for θ ∈ [30,60,90].*π/180
+    for ϕ ∈ collect(0:45:270).*π/180
+      fox[k] = round(Int32,kf*cos(θ));
+      foy[k] = round(Int32,kf*sin(θ)*sin(ϕ));
+      foz[k] = round(Int32,kf*sin(θ)*cos(ϕ));
+      k+=1;
+    end
+  end
+  fox[22] = kf;
+  foy[22] = 0;
+  foz[22] = 0;
+
+  #for k = 1:22
+  #  println("fox[$k] = "*string(fox[k])*",foy[$k] = "*string(foy[k])*",foz[$k] = "*string(foz[k]));
+  #end
+  #=
   fox[1]=  2; foy[1]=  1; foz[1]=  1;
   fox[2]=  2; foy[2]=  1; foz[2]= -1;
   fox[3]=  2; foy[3]= -1; foz[3]=  1;
@@ -163,11 +180,12 @@ function Setupfos1s2(grid::AbstractGrid;k_factor = 1)
   fox[20]= 2; foy[20]= 2; foz[20]=-2;
   fox[21]= 2; foy[21]=-2; foz[21]= 2;
   fox[22]= 2; foy[22]=-2; foz[22]=-2;
+  =#
 
   fo = zeros(Int32,3,22);
-  fo[1,:] .= k_factor*fox;
-  fo[2,:] .= k_factor*foy;
-  fo[3,:] .= k_factor*foz;
+  fo[1,:] .= fox;
+  fo[2,:] .= foy;
+  fo[3,:] .= foz;
 
   # Set up vector set s1 s2 that ⊥ k_f
   s1,s2 = zeros(3,22),zeros(3,22);
@@ -175,8 +193,8 @@ function Setupfos1s2(grid::AbstractGrid;k_factor = 1)
     for k_i = 1:k_component
       # index 1,2,3 -> i,j,k direction
       rkx,rky,rkz = fox[k_i],foy[k_i],foz[k_i];
-    ryz = √( rky^2 +rkz^2 );
-    rxyz= √( rkx^2 +rky^2 +rkz^2);
+      ryz = √( rky^2 +rkz^2 );
+      rxyz= √( rkx^2 +rky^2 +rkz^2);
       if (ryz == 0.0)
            s1[1,k_i]=0.0
            s1[2,k_i]=1.0

@@ -139,7 +139,7 @@ function SetMHDVars(::Dev, grid::AbstractGrid) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz nonlin1 nonlin2 nonlin3
-  @devzeros Dev Complex{T} (grid.nkr, grid.nm, grid.nl) uxh uyh uzh bxh byh bzh nonlinh1 nonlinh2 nonlinh3
+  @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) uxh uyh uzh bxh byh bzh nonlinh1 nonlinh2 nonlinh3
   
   return MVars( ux,  uy,  uz,  bx,  by,  bz,
               uxh, uyh, uzh, bxh, byh, bzh,
@@ -150,7 +150,7 @@ function SetHDVars(::Dev, grid::AbstractGrid) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz nonlin1 nonlin2 nonlin3
-  @devzeros Dev Complex{T} (grid.nkr, grid.nm, grid.nl) uxh uyh uzh nonlinh1 nonlinh2 nonlinh3
+  @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) uxh uyh uzh nonlinh1 nonlinh2 nonlinh3
   
   return HVars( ux,  uy,  uz,  uxh, uyh, uzh,
               nonlin1, nonlinh1, nonlin2, nonlinh2, nonlin3, nonlinh3);

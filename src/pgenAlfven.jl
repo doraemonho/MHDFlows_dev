@@ -1,4 +1,4 @@
-module pgenCho
+module pgenAlfven
 #Problem Gernerator for setting Up the problem 
 
 using 
@@ -13,13 +13,13 @@ using
 include("MHDSolver.jl")
 include("datastructure.jl")
 
-export ChoProblem
+export AlfProblem
 
 MHDcalcN_advection!  = MHDSolver.MHDcalcN_advection!;
 
 nothingfunction(args...) = nothing;
 
-function ChoProblem(dev::Device=CPU();
+function AlfProblem(dev::Device=CPU();
   # Numerical parameters
                 nx = 64,
                 ny = nx,
@@ -141,12 +141,9 @@ end
 function Setupfos1s2(grid::AbstractGrid;kf = 15)
   # The 22 conponment 
   fox,foy,foz = zeros(Int32,22),zeros(Int32,22),zeros(Int32,22);
-  k = 1;
-  #for θ ∈ [88,89,90].*π/180
+#=  k = 1;
   for θ ∈ [-5,0,5].*π/180 #anisotropic turbulence injection
     for ϕ ∈ [-25,-15,-5,0,5,15,25].*π/180
-  #for θ ∈ [30,60,90].*π/180
-    #for ϕ ∈ collect(0:45:270).*π/180
       fox[k] = round(Int32,kf*cos(θ));
       foy[k] = round(Int32,kf*sin(θ)*sin(ϕ));
       foz[k] = round(Int32,kf*sin(θ)*cos(ϕ));
@@ -156,15 +153,11 @@ function Setupfos1s2(grid::AbstractGrid;kf = 15)
   fox[22] = 0;
   foy[22] = kf;
   foz[22] = 0;
-
-  #fox[22] = kf;
-  #foy[22] = 0;
-  #foz[22] = 0;
-
+=#
   #for k = 1:22
   #  println("fox[$k] = "*string(fox[k])*",foy[$k] = "*string(foy[k])*",foz[$k] = "*string(foz[k]));
   #end
-  #=
+  
   fox[1]=  2; foy[1]=  1; foz[1]=  1;
   fox[2]=  2; foy[2]=  1; foz[2]= -1;
   fox[3]=  2; foy[3]= -1; foz[3]=  1;
@@ -187,7 +180,7 @@ function Setupfos1s2(grid::AbstractGrid;kf = 15)
   fox[20]= 2; foy[20]= 2; foz[20]=-2;
   fox[21]= 2; foy[21]=-2; foz[21]= 2;
   fox[22]= 2; foy[22]=-2; foz[22]=-2;
-  =#
+  
 
   fo = zeros(Int32,3,22);
   fo[1,:] .= fox;
@@ -251,7 +244,7 @@ end
 
 function Equation_with_forcing(dev,params::ChoParams, grid::AbstractGrid)
   T = eltype(grid)
-  L = zeros(dev, T, (grid.nkr,grid.nl, grid.nm, 6));
+  L = zeros(dev, T, (grid.nkr,grid.nm,grid.nk, 6));
     
   return FourierFlows.Equation(L,MHDcalcN!, grid)
 end

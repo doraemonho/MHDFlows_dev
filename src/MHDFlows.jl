@@ -9,29 +9,37 @@ using
 
 @reexport using FourierFlows
 
+using LinearAlgebra: mul!, ldiv!
+import Base: show, summary
+
+"Abstract supertype for problem."
+abstract type AbstractProblem end
+abstract type MHDVars <: AbstractVars end
+
+include("DyeModule.jl")
+include("Problems.jl")
 include("pgen.jl")
-include("MHDSolver.jl")
-include("MHDSolver_VP.jl")
 include("HDSolver.jl")
-include("datastructure.jl")
+include("MHDSolver.jl")
+include("DiagnosticWrapper.jl")
 include("integrator.jl")
-include("pgenCho.jl")
-include("pgenAlfven.jl")
-include("pgenVP.jl")
-include("VectorCalculus.jl")
-include("MHDAnalysis.jl")
+include("datastructure.jl")
+include("utils/VectorCalculus.jl")
+include("utils/MHDAnalysis.jl")
+include("utils/GeometryFunction.jl")
 
-@reexport using MHDFlows.pgen
-@reexport using MHDFlows.MHDSolver
-@reexport using MHDFlows.MHDSolver_VP
-@reexport using MHDFlows.HDSolver
-@reexport using MHDFlows.datastructure
-@reexport using MHDFlows.integrator
-@reexport using MHDFlows.pgenCho
-@reexport using MHDFlows.pgenAlfven
-@reexport using MHDFlows.pgenVP
-@reexport using MHDFlows.VectorCalculus
-@reexport using MHDFlows.MHDAnalysis
-
+export Problem,
+       TimeIntegrator!,
+       Curl,
+       Div,
+       LaplaceSolver,
+       Crossproduct,
+       Dotproduct,
+       xy_to_polar,
+       ScaleDecomposition,
+       h_k,
+       VectorPotential,
+       LaplaceSolver,
+       getL
 
 end

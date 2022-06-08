@@ -1,4 +1,7 @@
 module MHDSolver
+# ----------
+# Navier–Stokes Solver for 3D Magnetohydrodynamics Problem
+# ----------
 
 export 
 	UᵢUpdate!,
@@ -141,7 +144,6 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
         # Actual Advection
         @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼh;
         
-
         @. vars.nonlin1  *= 0;
         @. vars.nonlinh1 *= 0;    
         bᵢuⱼ  = vars.nonlin1; 

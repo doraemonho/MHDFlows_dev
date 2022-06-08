@@ -44,7 +44,7 @@ Environment: WSL2 in Win11 (Ubuntu 18.04 LTS) using
 
 **HD** (Taylor Green Vortex)
 
-| Spec CPU/GPU                | $32^3$ | $64^3$ | $128^3$ | $256^3$ |
+| Spec CPU/GPU                |  32^3  |  64^3  |  128^3  |  256^3  |
 | --------------------------- | ------ | ------ | ------- | ------- |
 | AMD Ryzen 7 5800x 8 threads | 0.139s | 0.178s | 0.764s  | 7.025s  |
 | NVIDIA RTX 3080 10GB        | 0.016s | 0.018s | 0.038s  | 0.211s  |

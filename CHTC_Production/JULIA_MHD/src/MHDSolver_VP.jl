@@ -1,9 +1,13 @@
 module MHDSolver_VP
-#MHD Solver using VP method
+# ----------
+# Navier–Stokes Solver for 3D Magnetohydrodynamics  Problem with Volume Penalization Method
+# ----------
 export 
 	UᵢUpdate!,
 	BᵢUpdate!,
-	MHDcalcN_advection!
+	MHDcalcN_advection!,
+  DivBCorrection!,
+  DivVCorrection!
 
 using
   CUDA,
@@ -233,6 +237,86 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")  
   
   return nothing
+end
+
+function DivBCorrection!(prob)
+#= 
+   Possion Solver for periodic boundary condition
+   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
+   We need to find Φ and remove it using a Poission Solver 
+   Here we are using the Fourier Method to find the Φ
+   In Real Space,  
+   ∇² Φ = ∇ ⋅ B   
+   In k-Space,  
+   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
+   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
+=#  
+
+  vars = prob.vars;
+  grid = prob.grid;
+  params = prob.params;
+  #find Φₖ
+  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
+  k⁻² = grid.invKrsq;
+  @. vars.nonlin1  *= 0;
+  @. vars.nonlinh1 *= 0;       
+  ∑ᵢkᵢBᵢh_k² = vars.nonlinh1;
+  ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
+  bxh = prob.sol[:, :, :, params.bx_ind];
+  byh = prob.sol[:, :, :, params.by_ind];
+  bzh = prob.sol[:, :, :, params.bz_ind];
+  ∑ᵢkᵢBᵢh_k² = @. -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
+  ∑ᵢkᵢBᵢh_k² = @. ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
+  
+  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+  bxh  .-= kᵢ.*∑ᵢkᵢBᵢh_k²;
+  byh  .-= kⱼ.*∑ᵢkᵢBᵢh_k²;
+  bzh  .-= kₖ.*∑ᵢkᵢBᵢh_k²;
+  
+  #Update to Real Space vars
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(bxh));# deepcopy() since inverse real-fft destroys its input
+  ldiv!(vars.by, grid.rfftplan, deepcopy(byh));# deepcopy() since inverse real-fft destroys its input
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(bzh));# deepcopy() since inverse real-fft destroys its input
+end
+
+function DivVCorrection!(prob)
+#= 
+   Possion Solver for periodic boundary condition
+   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
+   We need to find Φ and remove it using a Poission Solver 
+   Here we are using the Fourier Method to find the Φ
+   In Real Space,  
+   ∇² Φ = ∇ ⋅ B   
+   In k-Space,  
+   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
+   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
+=#  
+
+  vars = prob.vars;
+  grid = prob.grid;
+  params = prob.params;
+  #find Φₖ
+  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
+  k⁻² = grid.invKrsq;
+  @. vars.nonlin1  *= 0;
+  @. vars.nonlinh1 *= 0;       
+  ∑ᵢkᵢUᵢh_k² = vars.nonlinh1;
+  ∑ᵢkᵢUᵢ_k²  = vars.nonlin1;
+  uxh = prob.sol[:, :, :, params.ux_ind];
+  uyh = prob.sol[:, :, :, params.uy_ind];
+  uzh = prob.sol[:, :, :, params.uz_ind];
+  ∑ᵢkᵢUᵢh_k² = @. -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
+  ∑ᵢkᵢUᵢh_k² = @. ∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
+  
+  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+  uxh  .-= kᵢ.*∑ᵢkᵢUᵢh_k²;
+  uyh  .-= kⱼ.*∑ᵢkᵢUᵢh_k²;
+  uzh  .-= kₖ.*∑ᵢkᵢUᵢh_k²;
+  
+  #Update to Real Space vars
+  ldiv!(vars.ux, grid.rfftplan, deepcopy(uxh));# deepcopy() since inverse real-fft destroys its input
+  ldiv!(vars.uy, grid.rfftplan, deepcopy(uyh));# deepcopy() since inverse real-fft destroys its input
+  ldiv!(vars.uz, grid.rfftplan, deepcopy(uzh));# deepcopy() since inverse real-fft destroys its input
 end
 
 end

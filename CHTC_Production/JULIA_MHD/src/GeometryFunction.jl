@@ -1,16 +1,4 @@
-module GeometryFunction
 #The module provides Geometry convertion function
-export 
-  xy_to_polar
-
-using
-  Reexport
-
-@reexport using FourierFlows
-
-include("VectorCalculus.jl")
-using LinearAlgebra: mul!, ldiv!
-
 function xy_to_polar(ux,uy;L=2π)
 #=
   Function for converting x-y vector to r-θ vector, using linear transform
@@ -36,7 +24,4 @@ function xy_to_polar(ux,uy;L=2π)
     Ur[i,j,:] .= @.  cosθ*ux[i,j,:] + sinθ*uy[i,j,:];    
   end
     return Ur,Uθ;
-end
-
-
 end

@@ -1,19 +1,4 @@
-module VectorCalculus
 ## A functional moduile providing the basic vector calculus operation
-
-export 
-  Curl,
-  Div,
-  LaplaceSolver,
-  Crossproduct
-
-using
-  Reexport
-
-@reexport using FourierFlows
-
-using LinearAlgebra: mul!, ldiv!
-using FourierFlows: parsevalsum
 
 function Curl(B1::Array,B2::Array,B3::Array;Lx = 2π)
     #funtion of computing ∇×Vector using the fourier method
@@ -53,7 +38,7 @@ end
 
 function Div(B1::Array,B2::Array,B3::Array;Lx = 2π)
     #funtion of computing ∇̇ ⋅ Vector using the fourier method
-    # fft(∇̇ ⋅ Vector) -> im * k ⋅ V
+    # fft(∇·Vector) -> im * k ⋅ V
     # = im* x*B1 + y*B2 + z*B3
     nx,ny,nz = size(B1);
     T    = Float32;
@@ -104,6 +89,4 @@ function Crossproduct(A1,A2,A3,B1,B2,B3)
     C2 = @. -(A1*B3 - A3*B1); 
     C3 = @.  (A1*B2 - A2*B1);
     return C1,C2,C3
-end
-
 end

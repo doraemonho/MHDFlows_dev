@@ -12,6 +12,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                   file_number = 0,
                                       dump_dt = 0)
 
+    
   # Check if save function related parameter
   if (save)
     if length(save_loc) == 0 || length(filename) == 0 || dump_dt == 0
@@ -37,6 +38,10 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   end
 
   while (N₀ >= Nᵢ) && (t₀ >= prob.clock.t)  
+
+    #update the vars
+    updatevars!(prob);
+
     if (!usr_declared_dt)
         #update the CFL condition;
         updateCFL!(prob)
@@ -63,8 +68,6 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
         foo!(prob);
     end
 
-    #update the vars
-    updatevars!(prob);
 
     Nᵢ += 1;
         

@@ -1,20 +1,4 @@
-module MHDAnalysis
 #The module provides scale decompostion, helicity output function
-export 
-  ScaleDecomposition,
-  h_m,h_k,
-  VectorPotential,
-  getL
-
-using
-  Reexport
-
-@reexport using FourierFlows
-
-include("VectorCalculus.jl")
-using LinearAlgebra: mul!, ldiv!
-using FourierFlows: parsevalsum
-
 
 function ScaleDecomposition(B1::Array,B2::Array,B3::Array;kf=[1,5],Lx = 2π)
     k1,k2 = minimum(kf),maximum(kf);
@@ -104,33 +88,11 @@ function VectorPotential(B1,B2,B3;L=2π)
     
 end
 
-function LaplaceSolver(B; L=2π, T = Float32)
-#=
-funtion of computing ΔΦ = B using the fourier method, must be peroidic condition
-Considering in k-space, k² Φ' = B', we would get Φ = F(B'/k²)
-=#
-    nx,ny,nz = size(B);
-    T    = Float32;
-    grid = ThreeDGrid(nx, L, T = T);
-    Φ    = zeros(T,nx,ny,nz);
-    Bh   = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-    mul!(Bh, grid.rfftplan, B); 
-    for i in 1:div(nz,2)+1, j in 1:ny, k in 1:nx
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k]; 
-       k² = x^2 + y^2 + z^2;
-       Bh[i,j,k] = Bh[i,j,k]/k²;
-       if k² == 0; Bh[i,j,k] = 0; end 
-    end
-    ldiv!(Φ, grid.rfftplan, deepcopy(Bh));
-    return Φ; 
-end
-
 function h_m(ib,jb,kb)
 # A ⋅ B 
    Ax,Ay,Az = VectorPotential(ib,jb,kb);
    return Ax.*ib + Ay.*jb + Az.*kb;
 end
-
 
 #Checking for L across time
 function getL(iv,jv,kv;L=2π)
@@ -159,6 +121,3 @@ function getL(iv,jv,kv,grid)
     end    
     return Lᵢ,Lⱼ,Lₖ    
 end 
-
-
-end

@@ -19,7 +19,8 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
         error("Save Function Turned ON but save_loc/filename/dump_dt is not declared!\n");
     end 
     file_path_and_name = save_loc*filename;
-    savefile(prob, file_number; file_path_and_name = file_path_and_name)
+    savefile(prob, file_number; file_path_and_name = file_path_and_name);
+    file_number+=1;
   end
   
   # Declare the vars update function and CFL time calclator

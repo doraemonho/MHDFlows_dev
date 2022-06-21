@@ -36,6 +36,28 @@ function ScaleDecomposition(B1::Array,B2::Array,B3::Array;kf=[1,5],Lx = 2π)
     return cB1,cB2,cB3;
 end
 
+function ScaleDecomposition(B1::Array;kf=[1,5],Lx = 2π)
+    k1,k2 = minimum(kf),maximum(kf);
+    nx,ny,nz = size(B1);
+    T    = Float32;
+    grid = ThreeDGrid(nx, Lx, T = T);
+    
+    B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
+    Bxhf = copy(B1h); 
+    mul!(B1h, grid.rfftplan, B1); 
+    
+    for i in 1:div(nz,2)+1, j in 1:ny, k in 1:nx
+       x,y,z = grid.kr[i],grid.l[j],grid.m[k];
+       rr    = sqrt(x^2+y^2+z^2); 
+       if (( rr >=  k1) && (rr <= k2))
+           Bxhf[i,j,k] = B1h[i,j,k];
+       end
+    end
+    cB1 = zeros(T,size(B1));
+    ldiv!(cB1, grid.rfftplan,Bxhf);  
+    return cB1;
+end
+
 #Kenitic Helicity
 function h_k(iv,jv,kv;L=2π)
 # V ⋅ ( ∇ × V )

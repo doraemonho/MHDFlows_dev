@@ -76,7 +76,7 @@ function Div(B1::Array,B2::Array,B3::Array,grid;
     return cB1
 end
 
-function LaplaceSolver(B::Array; Lx=2π, Ly = Lx, Lz = Lz, T = Float32)
+function LaplaceSolver(B::Array; Lx=2π, Ly = Lx, Lz = Lx, T = Float32)
     nx,ny,nz = size(B);
     grid = ThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
     Φ   = LaplaceSolver(B,grid; Lx=2π, Ly = Lx, Lz = Lz, T = Float32);

@@ -55,7 +55,7 @@ function Div(B1::Array,B2::Array,B3::Array,grid;
              Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     #funtion of computing ∇̇ ⋅ Vector using the fourier method
     # fft(∇·Vector) -> im * k ⋅ V
-    # = im* x*B1 + y*B2 + z*B3
+    # = im* (x*B1 + y*B2 + z*B3)
     nx,ny,nz = size(B1);
     B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     B2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
@@ -67,13 +67,33 @@ function Div(B1::Array,B2::Array,B3::Array,grid;
         
     for k in 1:nz, j in 1:ny,i in 1:div(nx,2)+1 
        x,y,z = grid.kr[i],grid.l[j],grid.m[k]; 
-       Dot[i,j,k] = x*B1h[i,j,k] + y*B2h[i,j,k] + z*B3h[i,j,k];
+       Dot[i,j,k] = im*(x*B1h[i,j,k] + y*B2h[i,j,k] + z*B3h[i,j,k]);
     end
     
     cB1 = zeros(T,size(B1))
     ldiv!(cB1, grid.rfftplan, deepcopy(Dot));  
 
     return cB1
+end
+
+function Divk(B3::Array,grid; T = Float32)
+    # funtion of computing zdirection of ∇̇ ⋅ Vector using the fourier method
+    # fft(∇·Vector) -> im * k ⋅ V
+    # ∂(B)/∂xₖ = im*z*B3
+    nx,ny,nz = size(B1);
+    B3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+    Dot = copy(B3h);
+    mul!(B3h, grid.rfftplan, B3);
+        
+    for k in 1:nz, j in 1:ny,i in 1:div(nx,2)+1 
+       x,y,z = grid.kr[i],grid.l[j],grid.m[k]; 
+       Dot[i,j,k] = im*z*B3h[i,j,k];
+    end
+    
+    cB3 = zeros(T,size(B3))
+    ldiv!(cB3, grid.rfftplan, deepcopy(Dot));  
+
+    return cB3
 end
 
 function LaplaceSolver(B::Array; Lx=2π, Ly = Lx, Lz = Lx, T = Float32)

@@ -4,6 +4,7 @@
 
 function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                        usr_dt = 0.0,
+                                     CFL_Coef = 0.25,
                                         diags = [],
                                   loop_number = 100,
                                          save = false,
@@ -25,7 +26,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   
   # Declare the vars update function and CFL time calclator
   updatevars! = ifelse(prob.flag.b, MHDSolver.MHDupdatevars!,
-                                    HDSolver.HDupdatevars!);
+                                     HDSolver.HDupdatevars!);
   updateCFL!  = ifelse(prob.flag.b, CFL_MHD!, CFL_HD!);
 
   # Declare the iterator paramters
@@ -38,6 +39,12 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
     prob.clock.dt = usr_dt;
   end
 
+  #Corret v and b if VP method is turned on
+  if (prob.flag.vp == true)
+    MHDSolver_VP.DivVCorrection!(prob);
+    prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
+  end
+
   while (N₀ >= Nᵢ) && (t₀ >= prob.clock.t)  
 
     #update the vars
@@ -45,7 +52,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
     if (!usr_declared_dt)
         #update the CFL condition;
-        updateCFL!(prob)
+        updateCFL!(prob; Coef = CFL_Coef);
     end
   
     #update the system; 
@@ -68,7 +75,6 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
     for foo! ∈ prob.usr_func
         foo!(prob);
     end
-
 
     Nᵢ += 1;
         
@@ -196,6 +202,11 @@ function Restart!(prob,file_path_and_name)
     copyto!(prob.vars.bzh, deepcopy(bzh));  
   end
 
+  #if prob.flag.vp == true
+  #  χ = read(f,"chi");
+  #  copyto!(prob.params.χ, deepcopy(χ));
+  #end
+
   #Update Dye
   if prob.dye.dyeflag == true; 
     ρ = read(f,"dye_density"); 
@@ -225,6 +236,11 @@ function savefile(prob,file_number;file_path_and_name="")
         write(fw, "j_mag_field", Array(prob.vars.by));
         write(fw, "k_mag_field", Array(prob.vars.bz));
     end
+
+    #if (prob.flag.vp == true)
+    #    write(fw, "chi", Array(prob.params.χ));
+    #end
+
     write(fw, "time", prob.clock.t);
     close(fw) 
 end

@@ -24,6 +24,8 @@ using FourierFlows: parsevalsum
 
 function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
+  T = eltype(grid);
+  
   if direction == "x"
 
   	# a = {1,2,3} -> {x,y,z} direction

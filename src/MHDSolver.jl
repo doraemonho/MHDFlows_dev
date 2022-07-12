@@ -61,28 +61,18 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   for (bᵢ,uᵢ,kᵢ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
         for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
-
-          #We split the computation into two parts to save memory
-          @. vars.nonlin1  *= 0;
-          @. vars.nonlinh1 *= 0;
-          uᵢuⱼ  = vars.nonlin1;  
-          uᵢuⱼh = vars.nonlinh1;
-          @. uᵢuⱼ = uᵢ*uⱼ;
-          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
-
-          # Perform the actual calculation
-          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
-
-
-          @. vars.nonlin1  *= 0;
-          @. vars.nonlinh1 *= 0;
-          bᵢbⱼ  = vars.nonlin1; 
-          bᵢbⱼh = vars.nonlinh1;
-          @. bᵢbⱼ = bᵢ*bⱼ;;
-          mul!(bᵢbⱼh, grid.rfftplan, bᵢbⱼ);
           
-          # Perform the actual calculation
-          @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼh;
+          # Initialization
+          @. vars.nonlin1  *= 0;
+          @. vars.nonlinh1 *= 0;
+          bᵢbⱼ_minus_uᵢuⱼ  = vars.nonlin1;  
+          bᵢbⱼ_minus_uᵢuⱼh = vars.nonlinh1;
+          # Perform Computation in Real space
+          @. bᵢbⱼ_minus_uᵢuⱼ = bᵢ*bⱼ - uᵢ*uⱼ;
+          mul!(bᵢbⱼ_minus_uᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_uᵢuⱼ);
+
+          # Perform the Actual Advection update
+          @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
             
         end
     end
@@ -136,21 +126,13 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
         # Initialization 
         @. vars.nonlin1  *= 0;
         @. vars.nonlinh1 *= 0;
-        uᵢbⱼ  = vars.nonlin1;        
-        uᵢbⱼh = vars.nonlinh1;
+        uᵢbⱼ_minus_bᵢuⱼ  = vars.nonlin1;        
+        uᵢbⱼ_minus_bᵢuⱼh = vars.nonlinh1;
         # Perform Computation in Real space
-        @. uᵢbⱼ = uᵢ*bⱼ;
-        mul!(uᵢbⱼh, grid.rfftplan, uᵢbⱼ);
-        # Actual Advection
-        @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼh;
-        
-        @. vars.nonlin1  *= 0;
-        @. vars.nonlinh1 *= 0;    
-        bᵢuⱼ  = vars.nonlin1; 
-        bᵢuⱼh = vars.nonlinh1;
-        @. bᵢuⱼ = bᵢ*uⱼ;
-        mul!(bᵢuⱼh, grid.rfftplan, bᵢuⱼ);
-        @. ∂Bᵢh∂t += -im*kⱼ*bᵢuⱼh;
+        @. uᵢbⱼ_minus_bᵢuⱼ = uᵢ*bⱼ - bᵢ*uⱼ;
+        mul!(uᵢbⱼ_minus_bᵢuⱼh, grid.rfftplan, uᵢbⱼ_minus_bᵢuⱼ);
+        # Perform the Actual Advection update
+        @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼ_minus_bᵢuⱼh;  
 
     end
     

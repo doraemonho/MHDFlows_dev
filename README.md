@@ -6,9 +6,9 @@ Three Dimensional Magnetohydrodynamic(MHD) pseudospectral solvers written in Jul
 1. 2D incompressible  HD/MHD simulation (periodic boundary)
 2. 3D incompressible  HD/MHD simulation (periodic boundary)
 3. incompressible  HD/MHD simulation with volume penalization method (Public version not released yet)
-4. Passive Dye Passive Tracer (Experimental)
+4. Passive Dye Tracer (Experimental Feature)
 
-This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set u a module in order to solve the portable 3D incompressible MHD problems in periodic domains using pseudo-spectral method. Feel free to modify yourself for your own research purpose.
+This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set up a module in order to solve the portable 3D incompressible MHD problems in periodic domains using pseudo-spectral method. Feel free to modify yourself for your own research purpose.
 
 ## Version No.
 Beta 3.0
@@ -27,20 +27,20 @@ The MHD Solver could either run on CPU or GPU. The scalability is same as Fourie
 
 **Memory usage**
 
-For GPU users, here are useful numbers of memory requirement for choosing the resolution of the simulation. You may end up getting higher resolution for the same memory.
+For GPU users, here are some useful numbers of memory requirement for choosing the resolution of the simulation. You may end up getting higher resolution for the same memory.
 
 | Memory Size | Maximum Resolution ($N^3$ )    |
 | ----------- | ------------------------------ |
-| 6 GB        | $256^3 $ (pure HD simulation)  |
-| 10 GB       | $300^3 $ (pure MHD simulation) |
+| 6 GB        | $256^3$ (pure HD simulation)  |
+| 10 GB       | $300^3$ (pure MHD simulation) |
 
 **Speed**
 
-The following table provides the reference of the runtime for 1 iteration for pure HD/MHD module.
+The following table provides the reference of the runtime for 1 iteration in pure HD/MHD computation. As the benchmarks are running on the WSL2, the runtime could varies and does not reflect the best performance.
 
-Method : compute the mean time of 20 iteration using RK4 method
+Method: compute the mean time of 20 iterations using RK4 method
 
-Environment: WSL2 in Win11 (Ubuntu 18.04 LTS) using 
+Environment: WSL2 in Win11 (Ubuntu 18.04 LTS) (in jupyter-lab)
 
 **HD** (Taylor Green Vortex)
 
@@ -63,4 +63,4 @@ Few examples were set up to illustrate the workflow of using this package. See `
 MHDFlows is developed by [Ka Wai HO@UW-Madison Astronomy](https://scholar.google.com/citations?user=h2j8wbYAAAAJ&hl=en).
 
 ## Citing
-A paper can be cited elsewhere in the future : ). Feel free to cite the GitHub page right now. 
+A paper can be cited elsewhere in the future :slightly_smiling_face:. Feel free to cite the GitHub page right now. 

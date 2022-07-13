@@ -22,23 +22,23 @@ function Curl(B1::Array,B2::Array,B3::Array,grid;
     B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     B2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     B3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+    CB1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+    CB2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+    CB3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     mul!(B1h, grid.rfftplan, B1); 
     mul!(B2h, grid.rfftplan, B2); 
     mul!(B3h, grid.rfftplan, B3);
-    Bᵢtmp = zeros(ComplexF32,3);    
-    for k in 1:nz,  j in 1:ny, i in 1:div(nx,2)+1 
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k];
-       @. Bᵢtmp = copy(B1h[i,j,k]),copy(B2h[i,j,k]),copy(B3h[i,j,k]);
-       b1h,b2h,b3h =  Bᵢtmp;
-       B1h[i,j,k] = im*(y*b3h - z*b2h);
-       B2h[i,j,k] = im*(z*b1h - x*b3h);
-       B3h[i,j,k] = im*(x*b2h - y*b1h);
-    end
+    Bᵢtmp = zeros(ComplexF32,3);  
+    
+    kx,ky,kz = grid.kr,grid.l,grid.m; 
+    @. CB1h = im*(ky*B3h - kz*B2h);
+    @. CB2h = im*(kz*B1h - kx*B3h);
+    @. CB3h = im*(kx*B2h - ky*B1h);
     
     cB1,cB2,cB3 = zeros(T,size(B1)),zeros(T,size(B1)),zeros(T,size(B1));
-    ldiv!(cB1, grid.rfftplan, B1h);  
-    ldiv!(cB2, grid.rfftplan, B2h);
-    ldiv!(cB3, grid.rfftplan, B3h);
+    ldiv!(cB1, grid.rfftplan, CB1h);  
+    ldiv!(cB2, grid.rfftplan, CB2h);
+    ldiv!(cB3, grid.rfftplan, CB3h);
     return cB1,cB2,cB3;
 end
 
@@ -51,6 +51,7 @@ function Div(B1::Array,B2::Array,B3::Array;
     return cB1
 end
 
+
 function Div(B1::Array,B2::Array,B3::Array,grid;
              Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     #funtion of computing ∇̇ ⋅ Vector using the fourier method
@@ -60,15 +61,13 @@ function Div(B1::Array,B2::Array,B3::Array,grid;
     B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     B2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     B3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-    Dot = copy(B1h);
+    Dot = zeros(Complex{T},(div(nx,2)+1,ny,nz));
     mul!(B1h, grid.rfftplan, B1); 
     mul!(B2h, grid.rfftplan, B2); 
     mul!(B3h, grid.rfftplan, B3);
         
-    for k in 1:nz, j in 1:ny,i in 1:div(nx,2)+1 
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k]; 
-       Dot[i,j,k] = im*(x*B1h[i,j,k] + y*B2h[i,j,k] + z*B3h[i,j,k]);
-    end
+    kx,ky,kz = grid.kr,grid.l,grid.m; 
+    @. Dot = im*(kx*B1h+ky*B2h+kz*B3h)
     
     cB1 = zeros(T,size(B1))
     ldiv!(cB1, grid.rfftplan, deepcopy(Dot));  
@@ -131,4 +130,46 @@ end
 
 function Dotproduct(A1,A2,A3,B1,B2,B3)
     return A1.*B1 + A2.*B2 + A3.*B3 
+end
+
+function DivVCorrection!(ux,uy,uz,grid)
+#= 
+   Possion Solver for periodic boundary condition
+   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
+   We need to find Φ and remove it using a Poission Solver 
+   Here we are using the Fourier Method to find the Φ
+   In Real Space,  
+   ∇² Φ = ∇ ⋅ B   
+   In k-Space,  
+   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
+   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
+=#  
+
+    
+  nx,ny,nz = grid.nx,grid.ny,grid.nz;  
+  uxh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  uyh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  uzh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  mul!(uxh, grid.rfftplan, ux); 
+  mul!(uyh, grid.rfftplan, uy); 
+  mul!(uzh, grid.rfftplan, uz);
+
+  #find Φₖ
+  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
+  k⁻² = grid.invKrsq;
+  ∑ᵢkᵢUᵢh_k² = 0 .*copy(uxh);
+  ∑ᵢkᵢUᵢ_k²  = 0 .*copy(ux);  
+    
+  ∑ᵢkᵢUᵢh_k² = @. -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
+  ∑ᵢkᵢUᵢh_k² = @. ∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
+  
+  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+  uxh  .-= kᵢ.*∑ᵢkᵢUᵢh_k²;
+  uyh  .-= kⱼ.*∑ᵢkᵢUᵢh_k²;
+  uzh  .-= kₖ.*∑ᵢkᵢUᵢh_k²;
+  
+  #Update to Real Space vars
+  ldiv!(ux, grid.rfftplan, deepcopy(uxh));# deepcopy() since inverse real-fft destroys its input
+  ldiv!(uy, grid.rfftplan, deepcopy(uyh));# deepcopy() since inverse real-fft destroys its input
+  ldiv!(uz, grid.rfftplan, deepcopy(uzh));# deepcopy() since inverse real-fft destroys its input
 end

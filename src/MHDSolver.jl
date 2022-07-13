@@ -146,13 +146,13 @@ end
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Fourier Conponment
-  @. vars.uxh = sol[:, :, :, params.ux_ind];
-  @. vars.uyh = sol[:, :, :, params.uy_ind];
-  @. vars.uzh = sol[:, :, :, params.uz_ind];
+  copyto!(vars.uxh, @view sol[:, :, :, params.ux_ind]);
+  copyto!(vars.uyh, @view sol[:, :, :, params.uy_ind]);
+  copyto!(vars.uzh, @view sol[:, :, :, params.uz_ind]);
     
-  @. vars.bxh = sol[:, :, :, params.bx_ind];
-  @. vars.byh = sol[:, :, :, params.by_ind];
-  @. vars.bzh = sol[:, :, :, params.bz_ind];
+  copyto!(vars.bxh, @view sol[:, :, :, params.bx_ind]);
+  copyto!(vars.byh, @view sol[:, :, :, params.by_ind]);
+  copyto!(vars.bzh, @view sol[:, :, :, params.bz_ind]);
 
   #Update V + B Real Conponment
   ldiv!(vars.ux, grid.rfftplan, deepcopy(vars.uxh))
@@ -181,13 +181,14 @@ function MHDupdatevars!(prob)
   dealias!(sol, grid)
   
   #Update V + B Fourier Conponment
-  @. vars.uxh = sol[:, :, :, params.ux_ind];
-  @. vars.uyh = sol[:, :, :, params.uy_ind];
-  @. vars.uzh = sol[:, :, :, params.uz_ind];
+  copyto!(vars.uxh, @view sol[:, :, :, params.ux_ind]);
+  copyto!(vars.uyh, @view sol[:, :, :, params.uy_ind]);
+  copyto!(vars.uzh, @view sol[:, :, :, params.uz_ind]);
     
-  @. vars.bxh = sol[:, :, :, params.bx_ind];
-  @. vars.byh = sol[:, :, :, params.by_ind];
-  @. vars.bzh = sol[:, :, :, params.bz_ind];
+  copyto!(vars.bxh, @view sol[:, :, :, params.bx_ind]);
+  copyto!(vars.byh, @view sol[:, :, :, params.by_ind]);
+  copyto!(vars.bzh, @view sol[:, :, :, params.bz_ind]);
+
 
   #Update V + B Real Conponment
   ldiv!(vars.ux, grid.rfftplan, deepcopy(vars.uxh)) # deepcopy() since inverse real-fft destroys its input

@@ -29,6 +29,18 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                      HDSolver.HDupdatevars!);
   updateCFL!  = ifelse(prob.flag.b, CFL_MHD!, CFL_HD!);
 
+  # Declare the timescale for diffusion
+  if prob.flag.b
+    vi = maximum([prob.params.ν,prob.params.η]);
+  else
+    vi = prob.params.ν;
+  end
+  dx = prob.grid.Lx/prob.grid.nx;
+  dy = prob.grid.Ly/prob.grid.ny;
+  dz = prob.grid.Lz/prob.grid.nz;
+  dl = minimum([dx,dy,dz]);
+  t_diff = CFL_Coef*dl^2/vi;
+
   # Declare the iterator paramters
   Nᵢ = 0;
   t_next_save = prob.clock.t + dump_dt;
@@ -52,7 +64,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
     if (!usr_declared_dt)
         #update the CFL condition;
-        updateCFL!(prob; Coef = CFL_Coef);
+        updateCFL!(prob, t_diff; Coef = CFL_Coef);
     end
   
     #update the system; 
@@ -96,7 +108,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
 end
 
-function CFL_MHD!(prob;Coef = 0.25)
+function CFL_MHD!(prob,t_diff;Coef = 0.25)
     #Solving the dt of CFL condition using dt = Coef*dx/v
     
     #Maxmium velocity 
@@ -116,26 +128,25 @@ function CFL_MHD!(prob;Coef = 0.25)
     dy = prob.grid.Ly/prob.grid.ny;
     dz = prob.grid.Lz/prob.grid.nz;
     dl = minimum([dx,dy,dz]);
-    dt =  Coef*dl/vmax;
+    dt = minimum([Coef*dl/vmax,t_diff]);
     prob.clock.dt = dt;
-
 end
 
 
-function CFL_HD!(prob;Coef = 0.25)
+function CFL_HD!(prob,t_diff;Coef = 0.25)
     #Solving the dt of CFL condition using dt = Coef*dx/v
     
     #Maxmium velocity 
     @. prob.vars.nonlin1 *=0;
     v2 = prob.vars.nonlin1;
-    v2 += prob.vars.ux.^2 + prob.vars.uy.^2 + prob.vars.uz.^2;
+    @. v2 += prob.vars.ux.^2 + prob.vars.uy.^2 + prob.vars.uz.^2;
     vmax = sqrt(maximum(v2));
 
     dx = prob.grid.Lx/prob.grid.nx;
     dy = prob.grid.Ly/prob.grid.ny;
     dz = prob.grid.Lz/prob.grid.nz;
     dl = minimum([dx,dy,dz]);
-    dt =  Coef*dl/vmax;
+    dt = minimum([Coef*dl/vmax,t_diff]);
     prob.clock.dt = dt;
 
 end
@@ -143,7 +154,12 @@ end
 function ProbDiagnostic(prob,N; print_=false)
     dV = (2π/prob.grid.nx)^3;
     vx,vy,vz = prob.vars.ux,prob.vars.uy,prob.vars.uz;
-    KE =  string(round(sum(vx.^2+vy.^2 + vz.^2)*dV,sigdigits=3));
+    if prob.flag.vp
+        χ  = prob.params.χ;  
+        KE =  string(round(sum(vx[χ.==0].^2+vy[χ.==0].^2 + vz[χ.==0].^2)*dV,sigdigits=3));
+    else
+        KE =  string(round(sum(vx.^2+vy.^2 + vz.^2)*dV,sigdigits=3));
+    end
     tt =  string(round(prob.clock.t,sigdigits=3));
     nn = string(N);
     for i = 1:8-length(string(tt));tt= " "*tt;end

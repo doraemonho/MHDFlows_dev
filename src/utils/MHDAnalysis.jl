@@ -4,58 +4,71 @@
 
 
 # Scale Decomposition FUnction
-function ScaleDecomposition(B1::Array,B2::Array,B3::Array;kf=[1,5],Lx = 2π)
-    k1,k2 = minimum(kf),maximum(kf);
+function ScaleDecomposition(B1::Array;kf=[1,5],Lx = 2π)
     nx,ny,nz = size(B1);
     T    = Float32;
     grid = ThreeDGrid(nx, Lx, T = T);
+
+    cB1  = ScaleDecomposition(B1,grid;kf=kf,Lx = Lx)
+    return cB1;
+end
+
+function ScaleDecomposition(B1::Array,grid;kf=[1,5],Lx = 2π)
+    k1,k2 = minimum(kf),maximum(kf);
+    nx,ny,nz = size(B1);
+    T    = eltype(grid);
+    
+    B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
+    mul!(B1h, grid.rfftplan, B1); 
+    
+    kx,ky,kz = grid.kr,grid.l,grid.m;
+    kr = @. sqrt(kx^2 + ky^2 + kz^2);
+    K  = zeros(T,size(kr));
+    K[k2 .>= kr .>= k1] .= 1;
+    @. B1h = B1h*K;
+    
+    cB1 = zeros(T,size(B1));
+    ldiv!(cB1, grid.rfftplan,B1h);  
+    return cB1;
+end
+
+function ScaleDecomposition(B1::Array,B2::Array,B3::Array;kf=[1,5],Lx = 2π)
+    nx,ny,nz = size(B1);
+    T    = Float32;
+    grid = ThreeDGrid(nx, Lx, T = T);
+
+    cB1,cB2,cB3 = ScaleDecomposition(B1,B2,B3,grid;kf=kf,Lx = Lx)
+    return cB1,cB2,cB3;
+end
+
+function ScaleDecomposition(B1::Array,B2::Array,B3::Array,grid;kf=[1,5],Lx = 2π)
+    k1,k2 = minimum(kf),maximum(kf);
+    nx,ny,nz = size(B1);
+    T    = eltype(grid);
     
     B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
     B2h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
     B3h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-    Bxhf = copy(B1h); 
-    Byhf = copy(B2h);
-    Bzhf = copy(B3h);
     mul!(B1h, grid.rfftplan, B1); 
     mul!(B2h, grid.rfftplan, B2); 
-    mul!(B3h, grid.rfftplan, B3);
+    mul!(B3h, grid.rfftplan, B3); 
     
-    for i in 1:div(nz,2)+1, j in 1:ny, k in 1:nx
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k];
-       rr    = sqrt(x^2+y^2+z^2); 
-       if (( rr >=  k1) && (rr <= k2))
-           Bxhf[i,j,k] = B1h[i,j,k];
-           Byhf[i,j,k] = B2h[i,j,k];
-           Bzhf[i,j,k] = B3h[i,j,k];
-       end
-    end
-    cB1,cB2,cB3 = zeros(T,size(B1)),zeros(T,size(B1)),zeros(T,size(B1));
-    ldiv!(cB1, grid.rfftplan,Bxhf);  
-    ldiv!(cB2, grid.rfftplan,Byhf);
-    ldiv!(cB3, grid.rfftplan,Bzhf);
-    return cB1,cB2,cB3;
-end
+    kx,ky,kz = grid.kr,grid.l,grid.m;
+    kr = @. sqrt(kx^2 + ky^2 + kz^2);
+    K  = zeros(T,size(kr));
+    K[k2 .>= kr .>= k1] .= 1;
+    
+    @. B1h = B1h*K;
+    @. B2h = B2h*K;
+    @. B3h = B3h*K;
 
-function ScaleDecomposition(B1::Array;kf=[1,5],Lx = 2π)
-    k1,k2 = minimum(kf),maximum(kf);
-    nx,ny,nz = size(B1);
-    T    = Float32;
-    grid = ThreeDGrid(nx, Lx, T = T);
-    
-    B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-    Bxhf = copy(B1h); 
-    mul!(B1h, grid.rfftplan, B1); 
-    
-    for i in 1:div(nz,2)+1, j in 1:ny, k in 1:nx
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k];
-       rr    = sqrt(x^2+y^2+z^2); 
-       if (( rr >=  k1) && (rr <= k2))
-           Bxhf[i,j,k] = B1h[i,j,k];
-       end
-    end
     cB1 = zeros(T,size(B1));
-    ldiv!(cB1, grid.rfftplan,Bxhf);  
-    return cB1;
+    cB2 = zeros(T,size(B2));
+    cB3 = zeros(T,size(B3));
+    ldiv!(cB1, grid.rfftplan,B1h);
+    ldiv!(cB2, grid.rfftplan,B2h);  
+    ldiv!(cB3, grid.rfftplan,B3h);
+    return cB1,cB2,cB3;
 end
 
 #Kenitic Helicity
@@ -103,17 +116,14 @@ function VectorPotential(B1,B2,B3;L=2π)
     mul!(B1h, grid.rfftplan, B1); 
     mul!(B2h, grid.rfftplan, B2); 
     mul!(B3h, grid.rfftplan, B3);
-        
-    for i in 1:div(nz,2)+1, j in 1:ny, k in 1:nx
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k];
-       k²    = x^2 + y^2 + z^2; 
-       Axh[i,j,k] = im*(y*B3h[i,j,k] - z*B2h[i,j,k])/k²;
-       Ayh[i,j,k] = im*(z*B1h[i,j,k] - x*B3h[i,j,k])/k²;
-       Azh[i,j,k] = im*(x*B2h[i,j,k] - y*B1h[i,j,k])/k²;
-       Axh[i,j,k] = ifelse(k² == 0, 0,  Axh[i,j,k]);
-       Ayh[i,j,k] = ifelse(k² == 0, 0,  Ayh[i,j,k]);
-       Azh[i,j,k] = ifelse(k² == 0, 0,  Azh[i,j,k]);
-    end
+
+    k⁻² = grid.invKrsq;
+    kx,ky,kz = grid.kr,grid.l,grid.m; 
+
+    #Actual Computation
+    @. Axh = im*(ky*B3h - kz*B2h)*k⁻²;
+    @. Ayh = im*(kz*B1h - kx*B3h)*k⁻²;
+    @. Azh = im*(kx*B2h - ky*B1h)*k⁻²;
     
     A1,A2,A3 = zeros(T,size(B1)),zeros(T,size(B1)),zeros(T,size(B1));
     ldiv!(A1, grid.rfftplan, deepcopy(Axh));  

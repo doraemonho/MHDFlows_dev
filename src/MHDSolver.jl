@@ -184,7 +184,7 @@ function MHDupdatevars!(prob)
   copyto!(vars.uxh, @view sol[:, :, :, params.ux_ind]);
   copyto!(vars.uyh, @view sol[:, :, :, params.uy_ind]);
   copyto!(vars.uzh, @view sol[:, :, :, params.uz_ind]);
-    
+
   copyto!(vars.bxh, @view sol[:, :, :, params.bx_ind]);
   copyto!(vars.byh, @view sol[:, :, :, params.by_ind]);
   copyto!(vars.bzh, @view sol[:, :, :, params.bz_ind]);

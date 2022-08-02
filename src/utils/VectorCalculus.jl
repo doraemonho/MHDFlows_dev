@@ -135,17 +135,18 @@ end
 function DivVCorrection!(ux,uy,uz,grid)
 #= 
    Possion Solver for periodic boundary condition
-   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
+   As in VP method, ∇ ⋅ V = 0 may not hold, V = ∇×Ψ + ∇Φ -> ∇ ⋅ V = ∇² Φ
    We need to find Φ and remove it using a Poission Solver 
    Here we are using the Fourier Method to find the Φ
    In Real Space,  
-   ∇² Φ = ∇ ⋅ B   
+   ∇² Φ = ∇ ⋅ V   
    In k-Space,  
-   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
-   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
+   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Vₖ)ᵢ
+   Φₖ = i∑ᵢ kᵢ(Vₖ)ᵢ/k²
+   Vⱼ_new = Vₖⱼ + kⱼ i∑ᵢ kᵢ(Vₖ)ᵢ/k²; 
 =#  
 
-    
+  T = eltype(grid);  
   nx,ny,nz = grid.nx,grid.ny,grid.nz;  
   uxh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
   uyh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
@@ -160,8 +161,8 @@ function DivVCorrection!(ux,uy,uz,grid)
   ∑ᵢkᵢUᵢh_k² = 0 .*copy(uxh);
   ∑ᵢkᵢUᵢ_k²  = 0 .*copy(ux);  
     
-  ∑ᵢkᵢUᵢh_k² = @. -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
-  ∑ᵢkᵢUᵢh_k² = @. ∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
+  ∑ᵢkᵢUᵢh_k² = @. im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
+  ∑ᵢkᵢUᵢh_k² = @. -∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
   
   # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
   uxh  .-= kᵢ.*∑ᵢkᵢUᵢh_k²;
@@ -172,4 +173,5 @@ function DivVCorrection!(ux,uy,uz,grid)
   ldiv!(ux, grid.rfftplan, deepcopy(uxh));# deepcopy() since inverse real-fft destroys its input
   ldiv!(uy, grid.rfftplan, deepcopy(uyh));# deepcopy() since inverse real-fft destroys its input
   ldiv!(uz, grid.rfftplan, deepcopy(uzh));# deepcopy() since inverse real-fft destroys its input
+  return ux,uy,uz
 end

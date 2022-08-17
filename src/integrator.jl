@@ -1,10 +1,12 @@
 # ----------
 # Time Integrator Function for MHDFlows
 # ----------
+include("utils/func.jl");
 
 function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                        usr_dt = 0.0,
                                      CFL_Coef = 0.25,
+                                 CFL_function = nothingfunction,
                                         diags = [],
                                   loop_number = 100,
                                          save = false,
@@ -27,7 +29,11 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   # Declare the vars update function and CFL time calclator
   updatevars! = ifelse(prob.flag.b, MHDSolver.MHDupdatevars!,
                                      HDSolver.HDupdatevars!);
-  updateCFL!  = ifelse(prob.flag.b, CFL_MHD!, CFL_HD!);
+  if CFL_function == nothingfunction
+    updateCFL!  = getCFL!;
+  else
+    updateCFL!  = CFL_Init(CFL_function,usr_dt);
+  end
 
   # Declare the timescale for diffusion
   if prob.flag.b
@@ -42,8 +48,8 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   t_diff = CFL_Coef*dl^2/vi;
 
   # Declare the iterator paramters
-  Nᵢ = 0;
   t_next_save = prob.clock.t + dump_dt;
+  prob.clock.step = 0;
   
   # Check if user is declared a looping dt
   usr_declared_dt = usr_dt != 0.0 ? true : false 
@@ -53,11 +59,12 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
   #Corret v and b if VP method is turned on
   if (prob.flag.vp == true)
-    MHDSolver_VP.DivVCorrection!(prob);
+    #MHDSolver_VP.DivVCorrection!(prob);
     prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
   end
 
-  while (N₀ >= Nᵢ) && (t₀ >= prob.clock.t)  
+  time = @elapsed begin
+  while (N₀ >= prob.clock.step ) && (t₀ >= prob.clock.t)  
 
     #update the vars
     updatevars!(prob);
@@ -88,42 +95,53 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
         foo!(prob);
     end
 
-    Nᵢ += 1;
+    prob.clock.step += 1;
         
     #Save Section   
     if (save) && prob.clock.t >= t_next_save;
-      KE_ = ProbDiagnostic(prob, Nᵢ; print_ = false);
+      KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = false);
       isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
       savefile(prob, file_number; file_path_and_name = file_path_and_name)
       t_next_save += dump_dt;
       file_number +=1;
     end
 
-    if Nᵢ % loop_number == 0
-        KE_ = ProbDiagnostic(prob, Nᵢ; print_ = true);
+    if prob.clock.step % loop_number == 0
+        KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = true);
         isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
     end
 
   end
+  end
+
+  Ntotal = prob.grid.nx*prob.grid.ny*prob.grid.nz;
+  Total_Update_per_second = prob.clock.step* Ntotal/time;
+  print("Total CPU/GPU time run = $(round(time,digits=3)) s," 
+        *" zone update per second = $(round(Total_Update_per_second,digits=3)) \n");
+
 
 end
 
-function CFL_MHD!(prob,t_diff;Coef = 0.25)
+function getCFL!(prob, t_diff; Coef = 0.3);
     #Solving the dt of CFL condition using dt = Coef*dx/v
-    
-    #Maxmium velocity 
-    @. prob.vars.nonlin1 *=0;
-    v2 = prob.vars.nonlin1;
-    v2 += prob.vars.ux.^2 + prob.vars.uy.^2 + prob.vars.uz.^2;
-    v2_max = maximum(v2);
+    ux,uy,uz = prob.vars.ux, prob.vars.uy,prob.vars.uz;
 
-    #Maxmium Alfvenic velocity 
-    @. prob.vars.nonlin1 *=0;
-    v2a = prob.vars.nonlin1;
-    v2a += prob.vars.bx.^2 + prob.vars.by.^2 + prob.vars.bz.^2;
-    v2a_max = maximum(v2a);
- 
-    vmax = sqrt(maximum([v2_max,v2a_max]));
+    #Maxmium velocity 
+    v2xmax = maximum(ux.^2);
+    v2ymax = maximum(uy.^2);
+    v2zmax = maximum(uz.^2);
+    vmax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
+    
+    if prob.flag.b
+        #Maxmium Alfvenic velocity 
+        bx,by,bz = prob.vars.bx, prob.vars.by,prob.vars.bz;
+        v2xmax = maximum(bx.^2);
+        v2ymax = maximum(by.^2);
+        v2zmax = maximum(bz.^2);
+        vamax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
+        vmax = maximum([vmax,vamax]);
+    end
+    
     dx = prob.grid.Lx/prob.grid.nx;
     dy = prob.grid.Ly/prob.grid.ny;
     dz = prob.grid.Lz/prob.grid.nz;
@@ -132,23 +150,12 @@ function CFL_MHD!(prob,t_diff;Coef = 0.25)
     prob.clock.dt = dt;
 end
 
-
-function CFL_HD!(prob,t_diff;Coef = 0.25)
-    #Solving the dt of CFL condition using dt = Coef*dx/v
-    
-    #Maxmium velocity 
-    @. prob.vars.nonlin1 *=0;
-    v2 = prob.vars.nonlin1;
-    @. v2 += prob.vars.ux.^2 + prob.vars.uy.^2 + prob.vars.uz.^2;
-    vmax = sqrt(maximum(v2));
-
-    dx = prob.grid.Lx/prob.grid.nx;
-    dy = prob.grid.Ly/prob.grid.ny;
-    dz = prob.grid.Lz/prob.grid.nz;
-    dl = minimum([dx,dy,dz]);
-    dt = minimum([Coef*dl/vmax,t_diff]);
-    prob.clock.dt = dt;
-
+function CFL_Init(CFL_function::Function,usr_dt::Number)
+  if usr_dt > 0.0
+    error("User define both CFL_function and usr_dt");
+  elseif usr_dt == 0.0
+    return CFL_function
+  end
 end
 
 function ProbDiagnostic(prob,N; print_=false)

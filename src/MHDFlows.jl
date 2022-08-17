@@ -30,6 +30,7 @@ include("datastructure.jl")
 include("utils/VectorCalculus.jl")
 include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
+include("utils/func.jl")
 
 export Problem,
        TimeIntegrator!,

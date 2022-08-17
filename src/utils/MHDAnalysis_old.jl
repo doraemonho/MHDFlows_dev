@@ -1,5 +1,5 @@
 # ----------
-# MHD Analysis Method, providing MHD related quantities function 
+# MHD Analysis Module, providing MHD related quantities function 
 # ----------
 
 

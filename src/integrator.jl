@@ -63,54 +63,53 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   end
 
   time = @elapsed begin
-  while (N₀ >= prob.clock.step ) && (t₀ >= prob.clock.t)  
+    while (N₀ >= prob.clock.step ) && (t₀ >= prob.clock.t)   
 
-    #update the vars
-    updatevars!(prob);
+      #update the vars
+      updatevars!(prob);
 
-    if (!usr_declared_dt)
-        #update the CFL condition;
-        updateCFL!(prob, t_diff; Coef = CFL_Coef);
-    end
-  
-    #update the system; 
-    stepforward!(prob.sol, prob.clock, prob.timestepper, prob.eqn, 
-                 prob.vars, prob.params, prob.grid);
+      if (!usr_declared_dt)
+          #update the CFL condition;
+          updateCFL!(prob, t_diff; Coef = CFL_Coef);
+      end
 
-    #update the diags
-    increment!(diags)
+      #update the system; 
+      stepforward!(prob.sol, prob.clock, prob.timestepper, prob.eqn, 
+                   prob.vars, prob.params, prob.grid);
 
-    #Corret v and b if VP method is turned on
-    if (prob.flag.vp == true)
-      MHDSolver_VP.DivVCorrection!(prob);
-      prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
-    end
+      #update the diags
+      increment!(diags)
 
-    #Dye Update
-    prob.dye.dyeflag == true ? prob.dye.stepforward!(prob) : nothing;
+      #Corret v and b if VP method is turned on
+      if (prob.flag.vp == true)
+        #MHDSolver_VP.DivVCorrection!(prob);
+        prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
+      end
 
-    #User defined function
-    for foo! ∈ prob.usr_func
-        foo!(prob);
-    end
+      #Dye Update
+      prob.dye.dyeflag == true ? prob.dye.stepforward!(prob) : nothing;
 
-    prob.clock.step += 1;
-        
-    #Save Section   
-    if (save) && prob.clock.t >= t_next_save;
-      KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = false);
-      isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
-      savefile(prob, file_number; file_path_and_name = file_path_and_name)
-      t_next_save += dump_dt;
-      file_number +=1;
-    end
+      #User defined function
+      for foo! ∈ prob.usr_func
+          foo!(prob);
+      end
 
-    if prob.clock.step % loop_number == 0
-        KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = true);
+      prob.clock.step += 1;
+          
+      #Save Section   
+      if (save) && prob.clock.t >= t_next_save;
+        KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = false);
         isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
-    end
+        savefile(prob, file_number; file_path_and_name = file_path_and_name)
+        t_next_save += dump_dt;
+        file_number +=1;
+      end
 
-  end
+      if prob.clock.step % loop_number == 0
+          KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = true);
+          isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
+      end
+    end
   end
 
   Ntotal = prob.grid.nx*prob.grid.ny*prob.grid.nz;
@@ -122,31 +121,31 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 end
 
 function getCFL!(prob, t_diff; Coef = 0.3);
-    #Solving the dt of CFL condition using dt = Coef*dx/v
-    ux,uy,uz = prob.vars.ux, prob.vars.uy,prob.vars.uz;
+  #Solving the dt of CFL condition using dt = Coef*dx/v
+  ux,uy,uz = prob.vars.ux, prob.vars.uy,prob.vars.uz;
 
-    #Maxmium velocity 
-    v2xmax = maximum(ux.^2);
-    v2ymax = maximum(uy.^2);
-    v2zmax = maximum(uz.^2);
-    vmax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
+  #Maxmium velocity 
+  v2xmax = maximum(ux.^2);
+  v2ymax = maximum(uy.^2);
+  v2zmax = maximum(uz.^2);
+  vmax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
+  
+  if prob.flag.b
+    #Maxmium Alfvenic velocity 
+    bx,by,bz = prob.vars.bx, prob.vars.by,prob.vars.bz;
+    v2xmax = maximum(bx.^2);
+    v2ymax = maximum(by.^2);
+    v2zmax = maximum(bz.^2);
+    vamax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
+    vmax = maximum([vmax,vamax]);
+  end
     
-    if prob.flag.b
-        #Maxmium Alfvenic velocity 
-        bx,by,bz = prob.vars.bx, prob.vars.by,prob.vars.bz;
-        v2xmax = maximum(bx.^2);
-        v2ymax = maximum(by.^2);
-        v2zmax = maximum(bz.^2);
-        vamax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
-        vmax = maximum([vmax,vamax]);
-    end
-    
-    dx = prob.grid.Lx/prob.grid.nx;
-    dy = prob.grid.Ly/prob.grid.ny;
-    dz = prob.grid.Lz/prob.grid.nz;
-    dl = minimum([dx,dy,dz]);
-    dt = minimum([Coef*dl/vmax,t_diff]);
-    prob.clock.dt = dt;
+  dx = prob.grid.Lx/prob.grid.nx;
+  dy = prob.grid.Ly/prob.grid.ny;
+  dz = prob.grid.Lz/prob.grid.nz;
+  dl = minimum([dx,dy,dz]);
+  dt = minimum([Coef*dl/vmax,t_diff]);
+  prob.clock.dt = dt;
 end
 
 function CFL_Init(CFL_function::Function,usr_dt::Number)
@@ -158,28 +157,30 @@ function CFL_Init(CFL_function::Function,usr_dt::Number)
 end
 
 function ProbDiagnostic(prob,N; print_=false)
-    dV = (2π/prob.grid.nx)^3;
-    vx,vy,vz = prob.vars.ux,prob.vars.uy,prob.vars.uz;
-    if prob.flag.vp
-        χ  = prob.params.χ;  
-        KE =  string(round(sum(vx[χ.==0].^2+vy[χ.==0].^2 + vz[χ.==0].^2)*dV,sigdigits=3));
-    else
-        KE =  string(round(sum(vx.^2+vy.^2 + vz.^2)*dV,sigdigits=3));
-    end
-    tt =  string(round(prob.clock.t,sigdigits=3));
-    nn = string(N);
-    for i = 1:8-length(string(tt));tt= " "*tt;end
-    for i = 1:8-length(string(KE));KE= " "*KE;end
-    for i = 1:8-length(string(nn));nn= " "*nn;end
+  dx,dy,dz = diff(prob.grid.x)[1],diff(prob.grid.y)[1],diff(prob.grid.z)[1];
+  dV = dx*dy*dz;
+  vx,vy,vz = prob.vars.ux,prob.vars.uy,prob.vars.uz;
+  if prob.flag.vp
+      χ  = prob.params.χ;  
+      KE =  string(round(sum(vx[χ.==0].^2+vy[χ.==0].^2 + vz[χ.==0].^2)*dV,sigdigits=3));
+  else
+      KE =  string(round(sum(vx.^2+vy.^2 + vz.^2)*dV,sigdigits=3));
+  end
+  
+  tt =  string(round(prob.clock.t,sigdigits=3));
+  nn = string(N);
+  for i = 1:8-length(string(tt));tt= " "*tt;end
+  for i = 1:8-length(string(KE));KE= " "*KE;end
+  for i = 1:8-length(string(nn));nn= " "*nn;end
 
-    if (prob.flag.b == true)
-        bx,by,bz = prob.vars.bx,prob.vars.by,prob.vars.bz;
-        ME =  string(round(sum(bx.^2+by.^2 + bz.^2)*dV,sigdigits=3));
-        for i = 1:8-length(string(ME));ME= " "*ME;end
-        print_ == true ? println("n = $nn, t = $tt, KE = $KE, ME= $ME") : nothing;   
-    else
-        print_ == true ? println("n = $nn, t = $tt, KE = $KE") : nothing;  
-    end
+  if (prob.flag.b == true)
+      bx,by,bz = prob.vars.bx,prob.vars.by,prob.vars.bz;
+      ME =  string(round(sum(bx.^2+by.^2 + bz.^2)*dV,sigdigits=3));
+      for i = 1:8-length(string(ME));ME= " "*ME;end
+      print_ == true ? println("n = $nn, t = $tt, KE = $KE, ME= $ME") : nothing;   
+  else
+      print_ == true ? println("n = $nn, t = $tt, KE = $KE") : nothing;  
+  end
 
     return parse(Float32,KE)
 end
@@ -240,31 +241,30 @@ function Restart!(prob,file_path_and_name)
   # Update time 
   prob.clock.t = read(f,"time");
   close(f)
-
 end
 
 function savefile(prob,file_number;file_path_and_name="")
-    space_0 = ""
-    for i = 1:4-length(string(file_number));space_0*="0";end
-    fw = h5open(file_path_and_name*"_t_"*space_0*string(file_number)*".h5","w")
-    write(fw, "i_velocity",  Array(prob.vars.ux));
-    write(fw, "j_velocity",  Array(prob.vars.uy));
-    write(fw, "k_velocity",  Array(prob.vars.uz));
-    if (prob.dye.dyeflag == true)
-        write(fw, "dye_density",  Array(prob.dye.ρ));
-    end
-    if (prob.flag.b == true)
-        write(fw, "i_mag_field", Array(prob.vars.bx));
-        write(fw, "j_mag_field", Array(prob.vars.by));
-        write(fw, "k_mag_field", Array(prob.vars.bz));
-    end
+  space_0 = ""
+  for i = 1:4-length(string(file_number));space_0*="0";end
+  fw = h5open(file_path_and_name*"_t_"*space_0*string(file_number)*".h5","w")
+  write(fw, "i_velocity",  Array(prob.vars.ux));
+  write(fw, "j_velocity",  Array(prob.vars.uy));
+  write(fw, "k_velocity",  Array(prob.vars.uz));
+  if (prob.dye.dyeflag == true)
+      write(fw, "dye_density",  Array(prob.dye.ρ));
+  end
+  if (prob.flag.b == true)
+      write(fw, "i_mag_field", Array(prob.vars.bx));
+      write(fw, "j_mag_field", Array(prob.vars.by));
+      write(fw, "k_mag_field", Array(prob.vars.bz));
+  end
 
-    #if (prob.flag.vp == true)
-    #    write(fw, "chi", Array(prob.params.χ));
-    #end
+  #if (prob.flag.vp == true)
+  #    write(fw, "chi", Array(prob.params.χ));
+  #end
 
-    write(fw, "time", prob.clock.t);
-    close(fw) 
+  write(fw, "time", prob.clock.t);
+  close(fw) 
 end
 
 function MHDintegrator!(prob,t)

@@ -45,6 +45,8 @@ export Problem,
        h_k,
        VectorPotential,
        LaplaceSolver,
-       getL
+       getL,
+       Cylindrical_Mask_Function,
+       SetUpProblemIC!
 
 end

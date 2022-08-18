@@ -99,7 +99,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       #Save Section   
       if (save) && prob.clock.t >= t_next_save;
         KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = false);
-        isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
+        isnan(KE_) ? error("detected NaN! Quit the simulation right now.") : nothing;
         savefile(prob, file_number; file_path_and_name = file_path_and_name)
         t_next_save += dump_dt;
         file_number +=1;
@@ -107,7 +107,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
       if prob.clock.step % loop_number == 0
           KE_ = ProbDiagnostic(prob, prob.clock.step; print_ = true);
-          isnan(KE_) ? error("detected NaN! Quite the simulation right now.") : nothing;
+          isnan(KE_) ? error("detected NaN! Quit the simulation right now.") : nothing;
       end
     end
   end

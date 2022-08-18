@@ -1,7 +1,6 @@
 # ----------
 # Time Integrator Function for MHDFlows
 # ----------
-include("utils/func.jl");
 
 function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                        usr_dt = 0.0,

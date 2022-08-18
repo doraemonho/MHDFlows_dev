@@ -4,21 +4,19 @@
 
 
 # Scale Decomposition FUnction
-function ScaleDecomposition(B1::Array;kf=[1,5],Lx = 2π)
+function ScaleDecomposition(B1::Array;kf=[1,5],Lx = 2π,T=Float32)
   nx,ny,nz = size(B1);
-  T    = Float32;
   grid = ThreeDGrid(nx, Lx, T = T);
-
-  cB1  = ScaleDecomposition(B1,grid;kf=kf,Lx = Lx)
+  cB1  = ScaleDecomposition(B1,grid;kf=kf,Lx = Lx,T=T)
   return cB1;
 end
 
-function ScaleDecomposition(B1::Array,grid;kf=[1,5],Lx = 2π)
+function ScaleDecomposition(B1::Array,grid;kf=[1,5],Lx = 2π,T=Float32)
   k1,k2 = minimum(kf),maximum(kf);
   nx,ny,nz = size(B1);
   T    = eltype(grid); 
     
-  B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
+  B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
   mul!(B1h, grid.rfftplan, B1); 
     
   kx,ky,kz = grid.kr,grid.l,grid.m;
@@ -32,23 +30,22 @@ function ScaleDecomposition(B1::Array,grid;kf=[1,5],Lx = 2π)
   return cB1;
 end
 
-function ScaleDecomposition(B1::Array,B2::Array,B3::Array;kf=[1,5],Lx = 2π)
+function ScaleDecomposition(B1::Array,B2::Array,B3::Array;kf=[1,5],Lx = 2π,T=Float32)
   nx,ny,nz = size(B1);
-  T    = Float32;
   grid = ThreeDGrid(nx, Lx, T = T);
 
   cB1,cB2,cB3 = ScaleDecomposition(B1,B2,B3,grid;kf=kf,Lx = Lx)
   return cB1,cB2,cB3;
 end
 
-function ScaleDecomposition(B1::Array,B2::Array,B3::Array,grid;kf=[1,5],Lx = 2π)
+function ScaleDecomposition(B1::Array,B2::Array,B3::Array,grid;kf=[1,5],Lx = 2π, T=Float32)
   k1,k2 = minimum(kf),maximum(kf);
   nx,ny,nz = size(B1);
   T    = eltype(grid);
     
-  B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-  B2h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-  B3h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
+  B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  B2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  B3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
   mul!(B1h, grid.rfftplan, B1); 
   mul!(B2h, grid.rfftplan, B2); 
   mul!(B3h, grid.rfftplan, B3); 
@@ -69,27 +66,28 @@ function ScaleDecomposition(B1::Array,B2::Array,B3::Array,grid;kf=[1,5],Lx = 2π
   ldiv!(cB2, grid.rfftplan,B2h);  
   ldiv!(cB3, grid.rfftplan,B3h);
   return cB1,cB2,cB3;
+
 end
 
 #Kenitic Helicity
-function h_k(iv,jv,kv;L=2π)
+function h_k(iv::Array{T,3},jv::Array{T,3},kv::Array{T,3};L=2π) where T
   # V ⋅ ( ∇ × V )
   dlx,dly,dlz  = (L/size(iv)[1]),(L/size(iv)[2]),(L/size(iv)[3]);
   dV = dlx*dly*dlz;
   cV1,cV2,cV3 = Curl(iv,jv,kv;Lx=L);
-  h_k = @. (cV1*iv + cV2*jv + cV3*kv)*dV
+  h_k = @. (cV1::Array{T,3}*iv + cV2::Array{T,3}*jv + cV3::Array{T,3}*kv)*dV
   return h_k
 end
 
 #Megnetic Helicity
-function h_m(ib,jb,kb)
+function h_m(ib::Array{T,3},jb::Array{T,3},kb::Array{T,3}) where T
 # A ⋅ B 
    Ax,Ay,Az = VectorPotential(ib,jb,kb);
-   return Ax.*ib + Ay.*jb + Az.*kb;
+   return Ax::Array{T,3}.*ib + Ay::Array{T,3}.*jb + Az::Array{T,3}.*kb;
 end
 
 #Vector Potential
-function VectorPotential(B1,B2,B3;L=2π)
+function VectorPotential(B1::Array{T,3},B2::Array{T,3},B3::Array{T,3};L=2π) where T
 #=   
     funtion of computing B = ∇ × A using the fourier method
      fft(∇×Vector) -> im * k × A
@@ -104,12 +102,11 @@ function VectorPotential(B1,B2,B3;L=2π)
     Aₖ = (k × B)ᵢ/ k²   
 =#
   nx,ny,nz = size(B1);
-  T    = Float32;
   grid = ThreeDGrid(nx, L, T = T);
     
-  B1h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-  B2h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
-  B3h = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
+  B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  B2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+  B3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
   Axh = copy(B1h); 
   Ayh = copy(B2h);
   Azh = copy(B3h);
@@ -134,28 +131,22 @@ function VectorPotential(B1,B2,B3;L=2π)
 end
 
 #Checking for anagular momentum using center point as a reference (r = 0 at the center)
-function getL(iv,jv,kv;L=2π)
+function getL(iv::Array{T,3},jv::Array{T,3},kv::Array{T,3};L=2π) where T
   nx,ny,nz = size(iv);
-  T    = Float32;
   grid = ThreeDGrid(nx, L, T = T);
   Lᵢ,Lⱼ,Lₖ  = getL(iv,jv,kv,grid)
   return Lᵢ,Lⱼ,Lₖ    
 end 
 
-function getL(iv,jv,kv,grid)
-  nx,ny,nz = size(iv);
-  T    = Float32;
-  Lᵢ,Lⱼ,Lₖ = zeros(nx,ny,nz),zeros(nx,ny,nz),zeros(nx,ny,nz);
-  for k in 1:nz, j in 1:ny, i in 1:nx
-    x,y,z = grid.x[i],grid.y[j],grid.z[k];
-    r = sqrt(x^2 + y^2);
-    # L = r × p => iv,jv,kv
-    # |  i  j  k |
-    # |  x  y  z | = (y*kv - z*jv) i - (x*kv - z*iv) j + (x*jv - y*iv) k;  
-    # | iv jv kv |
-    Lᵢ[i,j,k] =   (y*kv[i,j,k] - z*jv[i,j,k]);
-    Lⱼ[i,j,k] =  -(x*kv[i,j,k] - z*iv[i,j,k]);
-    Lₖ[i,j,k] =   (x*jv[i,j,k] - y*iv[i,j,k]);
-  end    
-  return Lᵢ,Lⱼ,Lₖ    
+# Getting the anagular momentum L for cylindrical coordinates
+function getL(iv::Array{T,3},jv::Array{T,3},kv::Array{T,3},grid) where T
+  # L = r × p => (rᵢ,rⱼ,0) × (iv,jv,kv)
+  # |  i  j  k |
+  # | rᵢ rⱼ  0 | = (y*kv) i - (x*kv) j + (x*jv - y*iv) k;  
+  # | iv jv kv |
+  x,y,z = grid.x,grid.y,grid.z;
+  Li = @.  (y*kv - 0   );
+  Lj = @. -( 0   - z*iv);
+  Lk = @.  (x*jv - y*iv);
+  return Li,Lj,Lk    
 end 

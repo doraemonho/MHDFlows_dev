@@ -76,7 +76,7 @@ function Div(B1::Array,B2::Array,B3::Array,grid;
 end
 
 function Divk(B3::Array,grid; T = Float32)
-    # funtion of computing zdirection of ∇̇ ⋅ Vector using the fourier method
+    # funtion of computing z-direction of ∇̇ ⋅ Vector using the fourier method
     # fft(∇·Vector) -> im * k ⋅ V
     # ∂(B)/∂xₖ = im*z*B3
     nx,ny,nz = size(B1);

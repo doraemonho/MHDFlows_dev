@@ -1,3 +1,8 @@
+# ----------
+# General Function Module, providing function for setup IC of the problem
+# ----------
+
+
 function Cylindrical_Mask_Function(grid;R₂=0.82π,R₁=0.0π)
   nx,ny,nz = grid.nx,grid.ny,grid.nz;
   x,y,z = grid.x,grid.y,grid.z;
@@ -21,7 +26,8 @@ function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
   grid = prob.grid;
   params = prob.params;
   # Copy to usual data to both output and solution
-  for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],[params.ux_ind,params.uy_ind,params.uz_ind])
+  for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],
+                                [params.ux_ind,params.uy_ind,params.uz_ind])
     if uᵢ != []
       @views sol₀ =  sol[:, :, :, uᵢind];
       copyto!(prob_uᵢ,uᵢ);
@@ -29,7 +35,8 @@ function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
     end
   end
   if prob.flag.b 
-    for (bᵢ,prob_bᵢ,bᵢind) in zip([bx,by,bz],[vars.bx,vars.by,vars.bz],[params.bx_ind,params.by_ind,params.bz_ind])
+    for (bᵢ,prob_bᵢ,bᵢind) in zip([bx,by,bz],[vars.bx,vars.by,vars.bz],
+                                  [params.bx_ind,params.by_ind,params.bz_ind])
       if bᵢ != []
         @views sol₀ =  sol[:, :, :, bᵢind];
         copyto!(prob_bᵢ,bᵢ);

@@ -32,21 +32,20 @@ include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
 include("utils/func.jl")
 
-export Problem,             # Simulation Related function
+export Problem,           
        TimeIntegrator!,
        Restart!,
        Cylindrical_Mask_Function,
-       SetUpProblemIC!
-       Curl,                # Vector Calculas Related function
+       SetUpProblemIC!,
+       Curl,            
        Div,
        LaplaceSolver,
        Crossproduct,
        Dotproduct,
-       xy_to_polar,         # Geometry Related function
-       ScaleDecomposition,  # MHD Analysis Related function 
+       xy_to_polar,       
+       ScaleDecomposition, 
        h_k,
        VectorPotential,
        LaplaceSolver,
        getL
-
 end

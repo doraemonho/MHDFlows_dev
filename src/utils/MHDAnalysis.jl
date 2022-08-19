@@ -2,7 +2,6 @@
 # MHD Analysis Method, providing MHD related quantities function 
 # ----------
 
-
 # Scale Decomposition FUnction
 function ScaleDecomposition(B1::Array;kf=[1,5],Lx = 2π,T=Float32)
   nx,ny,nz = size(B1);

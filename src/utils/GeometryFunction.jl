@@ -1,9 +1,10 @@
+export xy_to_polar
 # ----------
 # Geometry Module, providing Geometry convertion function
 # ----------
 
 # xyz Coordinetes -> rθz Coordinates
-function xy_to_polar(ux::Array{T},uy::Array{T};Lx=2π,Ly=Lx,T=Float32)   
+function xy_to_polar(ux::Array,uy::Array;Lx=2π,Ly=Lx,T=Float32)   
   nx,ny,nz = size(ux);  
   dev = CPU();
   grid = TwoDGrid(dev, nx, Lx, ny, Ly; T=T)

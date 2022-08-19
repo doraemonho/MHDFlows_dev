@@ -16,38 +16,37 @@ end
 
 function GetA99vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) where Dev
 
-    b = convert(T,1.0);
-    @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) Fk e1x e1y e2x e2y e2z gi eⁱᶿ
+  b = convert(T,1.0);
+  @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) Fk e1x e1y e2x e2y e2z gi eⁱᶿ
     
-    return  usr_vars(b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ),A99ForceDriving!;
-
+  return  usr_vars(b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;
 end
 
 function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
 
-    # A99 Force
-    randN = typeof(N) <: Array ? Base.rand : CUDA.rand;
-    T  = eltype(grid);
-    b  = vars.usr_vars.b::T;
-    Fk = vars.usr_vars.Fk; 
-    e1x, e1y = vars.usr_vars.e1x,vars.usr_vars.e1y;
-    e2x, e2y, e2z = vars.usr_vars.e2x,vars.usr_vars.e2y,vars.usr_vars.e2z;
-    eⁱᶿ, gi =  vars.usr_vars.eⁱᶿ, vars.usr_vars.gi;
-    Φ  = vars.nonlinh1;
+  # A99 Force
+  randN = typeof(N) <: Array ? Base.rand : CUDA.rand;
+  T  = eltype(grid);
+  b  = vars.usr_vars.b::T;
+  Fk = vars.usr_vars.Fk; 
+  e1x, e1y = vars.usr_vars.e1x,vars.usr_vars.e1y;
+  e2x, e2y, e2z = vars.usr_vars.e2x,vars.usr_vars.e2y,vars.usr_vars.e2z;
+  eⁱᶿ, gi =  vars.usr_vars.eⁱᶿ, vars.usr_vars.gi;
+  Φ  = vars.nonlinh1;
     
-    # Work out the first conponement
-    eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
-    Φ   .= randN(Complex{T},grid.nkr,grid.nl,grid.nm).*π;
-    @. gi  = -tanh(b*(Φ - π/2))/tanh(b*π/2);
-    @. N[:,:,:,params.ux_ind] += Fk*eⁱᶿ*gi*e1x;
-    @. N[:,:,:,params.uy_ind] += Fk*eⁱᶿ*gi*e1y;
+  # Work out the first conponement
+  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  Φ   .= randN(Complex{T},grid.nkr,grid.nl,grid.nm).*π;
+  @. gi  = -tanh(b*(Φ - π/2))/tanh(b*π/2);
+  @. N[:,:,:,params.ux_ind] += Fk*eⁱᶿ*gi*e1x;
+  @. N[:,:,:,params.uy_ind] += Fk*eⁱᶿ*gi*e1y;
     
-    # Work out the seond conponement
-    eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
-    @. gi  = √(1 - gi^2); 
-    @. N[:,:,:,params.ux_ind] += Fk*eⁱᶿ*gi*e2x;
-    @. N[:,:,:,params.uy_ind] += Fk*eⁱᶿ*gi*e2y;
-    @. N[:,:,:,params.uz_ind] += Fk*eⁱᶿ*gi*e2z;
+  # Work out the seond conponement
+  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  @. gi  = √(1 - gi^2); 
+  @. N[:,:,:,params.ux_ind] += Fk*eⁱᶿ*gi*e2x;
+  @. N[:,:,:,params.uy_ind] += Fk*eⁱᶿ*gi*e2y;
+  @. N[:,:,:,params.uz_ind] += Fk*eⁱᶿ*gi*e2z;
 
     return nothing
 end

@@ -93,8 +93,6 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       for foo! ∈ prob.usr_func
           foo!(prob);
       end
-
-      prob.clock.step += 1;
           
       #Save Section   
       if (save) && prob.clock.t >= t_next_save;

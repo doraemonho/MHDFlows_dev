@@ -8,11 +8,11 @@ function xy_to_polar(ux::Array,uy::Array;Lx=2π,Ly=Lx,T=Float32)
   nx,ny,nz = size(ux);  
   dev = CPU();
   grid = TwoDGrid(dev, nx, Lx, ny, Ly; T=T)
-  Ur,Uθ = xy_to_polar(ux,uy,grid;Lx=2π,Ly=Lx,T=T);
+  Ur,Uθ = xy_to_polar(ux,uy,grid);
   return Ur,Uθ;
 end
 
-function xy_to_polar(ux::Array,uy::Array,grid;Lx=2π,Ly=Lx,T=Float32)
+function xy_to_polar(ux::Array{T,3},uy::Array{T,3},grid) where T
 #=
   Function for converting x-y vector to r-θ vector, using linear transform
     [x']  =  [cos(θ) -rsin(θ)][r']

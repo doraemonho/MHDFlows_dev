@@ -7,7 +7,7 @@ function Curl(B1::Array,B2::Array,B3::Array;
     # Wrapper for Curl Function
     nx,ny,nz = size(B1);
     grid = ThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
-    cB1,cB2,cB3 = Curl(B1,B2,B3,grid;T = T)
+    cB1,cB2,cB3 = Curl(B1,B2,B3,grid)
     return cB1,cB2,cB3;
 end
 
@@ -21,7 +21,7 @@ function Curl(B1,B2,B3,grid)
     nx,ny,nz = size(B1);
     dev = typeof(B1) <: Array ? CPU() : GPU();
     T   = eltype(grid);
-    
+
     @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h CB1h CB2h CB3h
     @devzeros typeof(dev)         T  (         nx,ny,nz) cB1 cB2 cB3
 
@@ -61,11 +61,7 @@ function Div(B1,B2,B3,grid)
 
     @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h Dot
     @devzeros typeof(dev)         T  (         nx,ny,nz) cB1
-
-    B1h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-    B2h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-    B3h = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-    Dot = zeros(Complex{T},(div(nx,2)+1,ny,nz));
+    
     mul!(B1h, grid.rfftplan, B1); 
     mul!(B2h, grid.rfftplan, B2); 
     mul!(B3h, grid.rfftplan, B3);
@@ -73,7 +69,7 @@ function Div(B1,B2,B3,grid)
     kx,ky,kz = grid.kr,grid.l,grid.m; 
     @. Dot = im*(kx*B1h+ky*B2h+kz*B3h)
     
-    ldiv!(cB1, grid.rfftplan, deepcopy(Dot));  
+    ldiv!(cB1, grid.rfftplan, Dot);  
 
     return cB1
 end
@@ -93,33 +89,30 @@ function Divk(B3::Array,grid; T = Float32)
     end
     
     cB3 = zeros(T,size(B3))
-    ldiv!(cB3, grid.rfftplan, deepcopy(Dot));  
+    ldiv!(cB3, grid.rfftplan, Dot);  
 
     return cB3
 end
 
-function LaplaceSolver(B::Array; Lx=2π, Ly = Lx, Lz = Lx, T = Float32)
+function LaplaceSolver(B; Lx=2π, Ly = Lx, Lz = Lx, T = Float32)
     nx,ny,nz = size(B);
     grid = ThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
-    Φ   = LaplaceSolver(B,grid; Lx=2π, Ly = Lx, Lz = Lz, T = Float32);
+    Φ   = LaplaceSolver(B,grid);
     return Φ
 end
 
-function LaplaceSolver(B::Array,grid; Lx=2π, Ly = Lx, Lz = Lz, T = Float32)
+function LaplaceSolver(B,grid)
     #=
     funtion of computing ΔΦ = B using the fourier method, must be peroidic condition
     Considering in k-space, k² Φ' = B', we would get Φ = F(B'/k²)
     =#
+    k⁻² = grid.invKrsq;
+    T   = eltype(grid);
     nx,ny,nz = size(B);
     Φ    = zeros(T,nx,ny,nz);
     Bh   = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
     mul!(Bh, grid.rfftplan, B); 
-    for k in 1:nz, j in 1:ny, i in 1:div(nx,2)+1
-       x,y,z = grid.kr[i],grid.l[j],grid.m[k]; 
-       k² = x^2 + y^2 + z^2;
-       Bh[i,j,k] = Bh[i,j,k]/k²;
-       if k² == 0; Bh[i,j,k] = 0; end 
-    end
+    @. Bh/=k⁻²;
     ldiv!(Φ, grid.rfftplan, deepcopy(Bh));
     return Φ;
 end

@@ -9,7 +9,6 @@ export
 	HDcalcN_advection!,
 	HDupdatevars!
 
-
 using
   CUDA,
   Reexport,

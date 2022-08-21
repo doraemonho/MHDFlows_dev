@@ -50,7 +50,7 @@ function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
       Uᵢ == [] ? nothing : copyto!(prob_Uᵢ,Uᵢ);
     end
 
-    if (prob.flag.b)
+    if prob.flag.b
       for (Bᵢ,prob_Bᵢ) in zip([B₀x,B₀y,B₀z],
                               [params.B₀x,params.B₀y,params.B₀z])
         Bᵢ == [] ? nothing : copyto!(prob_Bᵢ,Bᵢ);

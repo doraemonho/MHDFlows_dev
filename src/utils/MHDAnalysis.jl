@@ -144,7 +144,7 @@ function getL(iv::Array{T,3},jv::Array{T,3},kv::Array{T,3};L=2π) where T
 end 
 
 # Getting the anagular momentum L for cylindrical coordinates
-function getL(iv::Array{T,3},jv::Array{T,3},kv::Array{T,3},grid) where T
+function getL(iv,jv,kv,grid)
   # L = r × p => (rᵢ,rⱼ,0) × (iv,jv,kv)
   # |  i  j  k |
   # | rᵢ rⱼ  0 | = (y*kv) i - (x*kv) j + (x*jv - y*iv) k;  

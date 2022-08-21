@@ -45,6 +45,7 @@ export Problem,
        xy_to_polar,       
        ScaleDecomposition, 
        h_k,
+       h_m,
        VectorPotential,
        LaplaceSolver,
        getL

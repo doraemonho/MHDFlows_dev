@@ -1,5 +1,5 @@
 # ----------
-# Problem Generation Module : A99 Turbulence Module
+# Problem Generation Module : Turbulence Module From K. Alvelius (1999), Phys. Fluids 11, 1880
 # ----------
 
 mutable struct usr_vars{Atrans,T}
@@ -48,7 +48,7 @@ function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
   @. N[:,:,:,params.uy_ind] += Fk*eⁱᶿ*gi*e2y;
   @. N[:,:,:,params.uz_ind] += Fk*eⁱᶿ*gi*e2z;
 
-    return nothing
+  return nothing
 end
 
 function SetUpFk(prob; kf = 2, P = 1,σ²= 1)

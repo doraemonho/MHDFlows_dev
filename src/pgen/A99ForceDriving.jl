@@ -1,5 +1,5 @@
 # ----------
-# Problem Generation Module : Turbulence Module From K. Alvelius (1999), Phys. Fluids 11, 1880
+# Problem Generation Module : A99 Turbulence Module
 # ----------
 
 mutable struct usr_vars{Atrans,T}
@@ -19,7 +19,7 @@ function GetA99vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) wh
   b = convert(T,1.0);
   @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) Fk e1x e1y e2x e2y e2z gi eⁱᶿ
     
-  return  usr_vars(b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;
+  return  usr_vars(b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;  
 end
 
 function A99ForceDriving!(N, sol, t, clock, vars, params, grid)

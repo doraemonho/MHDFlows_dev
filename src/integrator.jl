@@ -2,6 +2,22 @@
 # Time Integrator Function for MHDFlows
 # ----------
 
+
+
+"""
+Time Integrator for MHDFlows problem 
+  Keyword arguments
+=================
+- `prob`: MHDFlows problem 
+- `N₀` : total iteration before stopping the integration (T type: Int)
+- `t₀` : total time before stopping the integration (T type: Float Number)
+- `usr_dt` : user defined time intreval for integration (T type: Float Number)
+- `CFL_Coef` : CFL Ceof. (T type : Float Number)
+- `CFL_function` : user defined CFL function 
+- `loop_number` : iteration count for displaying the diagnostic information (T type : Int)
+- `save` : save option for saving the hdf5 file (T type: true/false)
+$(TYPEDFIELDS)
+"""
 function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                        usr_dt = 0.0,
                                      CFL_Coef = 0.25,

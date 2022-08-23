@@ -1,8 +1,8 @@
 # ----------
-# Problem Generation Module : A99 Turbulence Module
+# Problem Generation Module : A99 Turbulence Module from 
 # ----------
 
-mutable struct usr_vars{Atrans,T}
+mutable struct A99_vars{Atrans,T}
   b   :: T
   Fk  :: Atrans
   e1x :: Atrans
@@ -19,7 +19,7 @@ function GetA99vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) wh
   b = convert(T,1.0);
   @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) Fk e1x e1y e2x e2y e2z gi eⁱᶿ
     
-  return  usr_vars(b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;  
+  return  A99_vars(b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;  
 end
 
 function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
@@ -54,11 +54,12 @@ end
 function SetUpFk(prob; kf = 2, P = 1,σ²= 1)
   grid = prob.grid;
   kx,ky,kz = grid.kr,grid.l,grid.m;
+  Lx,Ly,Lz  = grid.Lx,grid.Ly,grid.Lz;
+  dx,dy,dz  = grid.dx,grid.dy,grid.dz;
   k⁻¹  = @. √(grid.invKrsq);
   k    = @. √(grid.Krsq);
   k⊥   = @. √(kx^2 + ky^2);
-  dk⁻² = @. 1/(k+1)^2;θx,Ly,Lz  = grid.Lx,grid.Ly,grid.Lz;
-  dx,dy,dz  = grid.dx,grid.dy,grid.dz;
+  dk⁻² = @. 1/(k+1)^2;
   ∫Fkdk  = sum(@. exp(-(k.-kf)^2/σ²)*dk⁻²)
   A   = sqrt(P*3*(Lx/dx)*(Ly/dy)*(Lz/dz)/∫Fkdk*(1/dx/dy/dz));
   Fk  = @. A*√(exp(-(k.-kf)^2/σ²)/2/π)*k⁻¹;

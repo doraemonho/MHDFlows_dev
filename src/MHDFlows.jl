@@ -32,6 +32,11 @@ include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
 include("utils/func.jl")
 
+
+#pgen module
+include("pgen/A99ForceDriving.jl")
+include("pgen/TaylorGreenDynamo.jl")
+
 export Problem,           
        TimeIntegrator!,
        Restart!,

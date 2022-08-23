@@ -177,7 +177,7 @@ function spectralline(A::Array{T,2};Lx=2π) where T
 end
 
 function spectralline(A::Array{T,3};Lx=2π) where T
-  nx,ny = size(A);
+  nx,ny,nz = size(A);
   Ak = zeros(Complex{T},div(nx,2)+1,ny,nz);
   grid = ThreeDGrid(nx,Lx;T=T);
   mul!(Ak,grid.rfftplan,A);

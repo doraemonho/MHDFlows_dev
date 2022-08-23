@@ -1,8 +1,8 @@
 # ----------
-# Problem Generation Module : Taylor-Green vortex Dynamo
+# Problem Generation Module : Taylor-Green vortex Dynamo from Nore et al, Physics of Plasmas, 4, 1 (1997);
 # ----------
 
-mutable struct usr_vars{Aphys,Atrans}
+mutable struct N97_vars{Aphys,Atrans}
   fx  :: Aphys
   fy  :: Aphys
   fxh :: Atrans
@@ -37,5 +37,5 @@ function GetN97vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) wh
   @devzeros Dev         T  (            nx , ny, nz) fx  fy
   @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) fxh fyh
     
-  return  usr_vars(fx,fy,fxh,fyh), N97ForceDriving!;  
+  return  N97_vars(fx,fy,fxh,fyh), N97ForceDriving!;  
 end

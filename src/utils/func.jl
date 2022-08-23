@@ -2,6 +2,16 @@
 # General Function Module, providing function for setup IC of the problem
 # ----------
 
+
+"""
+Construct a Cylindrical Mask Function χ for VP method
+  Keyword arguments
+=================
+- `grid`: MHDFlows problem's grid
+- `R₂` : Outwards radius boundary
+- `R₁` : Inwards radius boundary
+$(TYPEDFIELDS)
+"""
 function Cylindrical_Mask_Function(grid;R₂=0.82π,R₁=0.0π)
   nx,ny,nz = grid.nx,grid.ny,grid.nz;
   x,y,z = grid.x,grid.y,grid.z;
@@ -15,7 +25,16 @@ function Cylindrical_Mask_Function(grid;R₂=0.82π,R₁=0.0π)
   end    
   return S
 end
-
+"""
+function of setting up the initial condition of the problem
+  Keyword arguments
+=================
+- `prob`: MHDFlows problem
+- `ux/uy/uz` : velocity in real space
+- `bx/by/bz` : B-field in real space
+- `U₀x/U₀y/U₀z/B₀x/B₀y/B₀z` : VP method parameter
+$(TYPEDFIELDS)
+"""
 function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
                                bx = [], by = [], bz =[],
                                U₀x= [], U₀y= [], U₀z=[],

@@ -24,7 +24,7 @@ function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
   vars = prob.vars;
   grid = prob.grid;
   params = prob.params;
-  # Copy to usual data to both output and solution
+  # Copy the data to both output and solution array
   for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],
                                 [params.ux_ind,params.uy_ind,params.uz_ind])
     if uᵢ != []

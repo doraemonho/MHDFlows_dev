@@ -155,3 +155,43 @@ function getL(iv,jv,kv,grid)
   Lk = @.  (x*jv - y*iv);
   return Li,Lj,Lk    
 end 
+
+# spectral line function for getting the spectrum
+function spectralline(A::Array{T,2};Lx=2π) where T
+  nx,ny = size(A);
+  Ak = zeros(Complex{T},div(nx,2)+1,ny);
+  grid = TwoDGrid(nx,Lx;T=T);
+  mul!(Ak,grid.rfftplan,A);
+  kk    = @. √(grid.Krsq);
+  krmax = round(Int,maximum(kk)+1);
+  Pk = zeros(T,(krmax));
+  kr = zeros(T,(krmax));
+  for j = 1:ny::Int
+    @simd for i = 1:div(nx,2)+1::Int
+           r = round(Int,kk[i,j])+1;
+      Pk[r] += abs(Ak[i,j]^2);
+      kr[r]  = r;
+    end
+  end
+  return Pk,kr
+end
+
+function spectralline(A::Array{T,3};Lx=2π) where T
+  nx,ny = size(A);
+  Ak = zeros(Complex{T},div(nx,2)+1,ny,nz);
+  grid = ThreeDGrid(nx,Lx;T=T);
+  mul!(Ak,grid.rfftplan,A);
+  kk    = @. √(grid.Krsq);
+  krmax = round(Int,maximum(kk)+1);
+  Pk = zeros(T,(krmax));
+  kr = zeros(T,(krmax));
+  for k = 1:nz::Int, j = 1:ny::Int
+    @simd for i = 1:div(nx,2)+1::Int
+           r = round(Int,kk[i,j,k])+1;
+      Pk[r] += abs(Ak[i,j,k]^2);
+      kr[r]  = r;
+    end
+  end
+  return Pk,kr
+end
+

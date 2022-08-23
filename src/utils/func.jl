@@ -2,7 +2,6 @@
 # General Function Module, providing function for setup IC of the problem
 # ----------
 
-
 function Cylindrical_Mask_Function(grid;R₂=0.82π,R₁=0.0π)
   nx,ny,nz = grid.nx,grid.ny,grid.nz;
   x,y,z = grid.x,grid.y,grid.z;

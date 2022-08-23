@@ -50,5 +50,6 @@ export Problem,
        VectorPotential,
        LaplaceSolver,
        getL,
+       spectralline,
        ⋅, ×
 end

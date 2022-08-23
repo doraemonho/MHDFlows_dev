@@ -8,7 +8,7 @@ Three Dimensional Magnetohydrodynamic(MHD) pseudospectral solvers written in Jul
 3. Incompressible  HD/MHD simulation with volume penalization method
 4. Passive Dye Tracer (Experimental Feature)
 
-This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set up the module. The main purpose of MHDFlows.jl aims to solve the portable 3D MHD problems on personal computer instead of cluster. Utilizing the Nvidia CUDA technology, the MHDFlows.jl could solve the front-end MHD turbulence problem in the order of few-ten minutes by using a mid to high end gaming display card (see Memory usage & speed section). Feel free to modify yourself for your own research purpose.
+This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set up the module. The main purpose of MHDFlows.jl aims to solve the portable 3D MHD problems on personal computer instead of cluster. Utilizing the Nvidia CUDA technology, the MHDFlows.jl could solve the front-end MHD turbulence research problems in the order of few-ten minutes by using a mid to high end gaming display card (see Memory usage & speed section). Feel free to modify yourself for your own research purpose.
 
 ## Version No.
 v 0.1.0
@@ -49,7 +49,7 @@ For GPU users, here are some useful numbers of memory requirement for choosing t
 
 The following table provides the reference of the runtime for 1 iteration in pure HD/MHD computation. As the benchmarks are running on the WSL2, the runtime could varies and does not reflect the best performance.
 
-Method: compute the mean time of 20 iterations using RK4 method
+Method: compute the average time used of 20 iterations using RK4 method
 
 Environment: WSL2 in Win11 (Ubuntu 18.04 LTS through jupyter-lab)
 
@@ -68,10 +68,10 @@ Environment: WSL2 in Win11 (Ubuntu 18.04 LTS through jupyter-lab)
 | NVIDIA RTX 3080 10GB        | 0.041s | 0.060s | 0.15s   | 1.23s   |
 
 ## Example
-Few examples were set up to illustrate the workflow of using this package. See `example\` for more detail. 
+Few examples were set up to illustrate the workflow of using this package. See `example\` for more detail.  The documentation is work in progress and will be available in the future. 
 
 ## Developer
-MHDFlows is developed by [Ka Wai HO@UW-Madison Astronomy](https://scholar.google.com/citations?user=h2j8wbYAAAAJ&hl=en).
+MHDFlows is currently developed by [Ka Wai HO@UW-Madison Astronomy](https://scholar.google.com/citations?user=h2j8wbYAAAAJ&hl=en).
 
 ## Citing
 A paper can be cited elsewhere in the future :slightly_smiling_face:. Feel free to cite the GitHub page right now. 

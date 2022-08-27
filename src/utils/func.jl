@@ -2,7 +2,6 @@
 # General Function Module, providing function for setup IC of the problem
 # ----------
 
-
 """
 Construct a Cylindrical Mask Function χ for VP method
   Keyword arguments
@@ -76,5 +75,64 @@ function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
     end
   end
   return nothing;
+  
+end
+
+
+"""
+Construct a Div Free Spectra Vector Map
+  Keyword arguments
+=================
+- `Nx/Ny/Nz`: size of the Vector Map
+- `k0` : Slope of the Map 
+- `b`  : Anisotropy of the Map
+$(TYPEDFIELDS)
+"""
+function DivFreeSpectraMap( Nx::Int, Ny::Int, Nz::Int;
+                            P = 1, k0 = -5/3/2, b = 1, T = Float64)
+  grid = ThreeDGrid(Nx,Ny,Nz, T = T)
+  return DivFreeSpectraMap( grid; P = P, k0 = k0, b = b);
+end
+
+function DivFreeSpectraMap( grid;
+                            P = 1, k0 = -5/3/2, b = 1)
+    
+  T = eltype(grid);  
+  @devzeros typeof(CPU()) Complex{T} (grid.nkr,grid.nl,grid.nm) eⁱᶿ Fk Fxh Fyh Fzh 
+  @devzeros typeof(CPU())         T  (grid.nx ,grid.ny,grid.nz) Fx Fy Fz
+  
+  kx,ky,kz = grid.kr,grid.l,grid.m;  
+  Lx,Ly,Lz  = grid.Lx,grid.Ly,grid.Lz;
+  dx,dy,dz  = grid.dx,grid.dy,grid.dz;
+  k⁻¹  = @. √(grid.invKrsq);
+  k    = @. √(grid.Krsq);
+  k⊥   = @. √(kx^2 + ky^2);
+  dk⁻² = @. 1/(k+1)^2;
+  Fk   = @. k.^(k0);
+  Fk[1,1,1] = 0.0;
+#  Fk[k.>5] .= 0;
+  ∫Fkdk  = sum(@. Fk*dk⁻²);
+  A   = sqrt(P*3*(Lx/dx)*(Ly/dy)*(Lz/dz)/∫Fkdk*(1/dx/dy/dz));
+  Fk*=A;
+    
+  e1x = @.  ky/k⊥;
+  e1y = @. -kx/k⊥;
+  e2x = @. kx*kz/k⊥*k⁻¹;
+  e2y = @. ky*kz/k⊥*k⁻¹;
+  e2z = @. -k⊥*k⁻¹;
+  e1x[isnan.(e1x)] .= 0;
+  e1y[isnan.(e1y)] .= 0;
+  e2x[isnan.(e2x)] .= 0;
+  e2y[isnan.(e2y)] .= 0;
+    
+  # Work out the random conponement 
+  eⁱᶿ .= exp.(im.*rand(T,grid.nkr,grid.nl,grid.nm)*2π);
+  @. Fxh += Fk*eⁱᶿ*e2x;
+  @. Fyh += Fk*eⁱᶿ*e2y;
+  @. Fzh += Fk*eⁱᶿ*e2z;
+  ldiv!(Fx, grid.rfftplan, deepcopy(Fxh));  
+  ldiv!(Fy, grid.rfftplan, deepcopy(Fyh));
+  ldiv!(Fz, grid.rfftplan, deepcopy(Fzh));
+  return Fx,Fy,Fz;
   
 end

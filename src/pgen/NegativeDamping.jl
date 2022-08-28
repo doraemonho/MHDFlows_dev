@@ -4,7 +4,7 @@
 # Fᵢ = fᵢ*uᵢ
 #----------------------
 
-mutable struct ND_vars{Aphys,Atrans}
+mutable struct ND_vars{Aphys}
   fx  :: Aphys
   fy  :: Aphys
   fz  :: Aphys
@@ -41,5 +41,5 @@ end
 function GetNDvars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) where Dev
   @devzeros Dev T  ( nx, ny, nz) fx  fy fz
     
-  return  ND_vars(fx,fy,fxh,fyh), NDForceDriving!;  
+  return  ND_vars(fx,fy,fz), NDForceDriving!;  
 end

@@ -36,6 +36,7 @@ include("utils/func.jl")
 #pgen module
 include("pgen/A99ForceDriving.jl")
 include("pgen/TaylorGreenDynamo.jl")
+include("pgen/NegativeDamping.jl")
 
 export Problem,           
        TimeIntegrator!,

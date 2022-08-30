@@ -4,36 +4,42 @@
 # Fᵢ = fᵢ*uᵢ
 #----------------------
 
-mutable struct ND_vars{Aphys}
+mutable struct ND_vars{Float,Aphys}
+  P   :: Float
   fx  :: Aphys
   fy  :: Aphys
   fz  :: Aphys
 end
 
-function SetUpND!(prob,fx_,fy_,fz_; F0 = 1, kf = 2)
-  grid = prob.grid;
+function SetUpND!(prob,P,fx,fy,fz)
   vars = prob.vars;
-  x,y,z = grid.x,grid.y,grid.z;
-  nx,ny,nz = grid.nx,grid.ny,grid.nz;
-  fx,fy,fz = vars.usr_vars.fx , vars.usr_vars.fy, vars.usr_vars.fz;
-  copyto!(fx,fx_);
-  copyto!(fy,fy_);
-  copyto!(fy,fz_);
+  vars.usr_vars.P = P;
+  copyto!(vars.usr_vars.fx,fx);
+  copyto!(vars.usr_vars.fy,fy);
+  copyto!(vars.usr_vars.fz,fz);
   return nothing;
 end
 
 function NDForceDriving!(N, sol, t, clock, vars, params, grid)
   uvars = vars.usr_vars; 
+  P   = vars.usr_vars.P;
   Fᵢ  = vars.nonlin1;
   Fᵢh = vars.nonlinh1;
-  for (fᵢ,uᵢ,uᵢind) in zip([uvars.fx,uvars.fy,uvars.fz],
-                           [vars.ux,vars.uy,vars.uz],
+  dx,dy,dz = grid.dx,grid.dy,grid.dz;
+  ux,uy,uz = vars.ux,vars.uy,vars.uz;
+  fx,fy,fz = uvars.fx,uvars.fy,uvars.fz;
+
+  ∫uᵢfᵢdV = (sum(abs.(@. ux^2*fx)) + sum(abs.(@. uy^2*fy)) +
+             sum(abs.(@. uz^2*fz)))*dx*dy*dz;
+  A = P/∫uᵢfᵢdV;
+  for (fᵢ,uᵢ,uᵢind) in zip([ux,uy,uz],
+                           [fx,fy,fz],
                            [params.ux_ind,params.uy_ind,params.uz_ind])
 
     @. Fᵢh*=0;
     @. Fᵢ = fᵢ*uᵢ;
     mul!(Fᵢh, grid.rfftplan, Fᵢ);
-    @views @. N[:,:,:,uᵢind] += Fᵢh;
+    @views @. N[:,:,:,uᵢind] += A*Fᵢh;
   end
   return nothing;
 end
@@ -41,5 +47,5 @@ end
 function GetNDvars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) where Dev
   @devzeros Dev T  ( nx, ny, nz) fx  fy fz
     
-  return  ND_vars(fx,fy,fz), NDForceDriving!;  
+  return  ND_vars(0.0 ,fx,fy,fz), NDForceDriving!;  
 end

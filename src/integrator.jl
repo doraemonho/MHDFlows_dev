@@ -53,6 +53,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   # Declare the timescale for diffusion
   if prob.flag.b
     vi = maximum([prob.params.ν,prob.params.η]);
+    nv = maximum([prob.params.nν,prob.params.nη]);
   else
     vi = prob.params.ν;
   end
@@ -60,7 +61,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   dy = prob.grid.Ly/prob.grid.ny;
   dz = prob.grid.Lz/prob.grid.nz;
   dl = minimum([dx,dy,dz]);
-  t_diff = CFL_Coef*dl^2/vi;
+  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(2*nv)/vi,CFL_Coef*dl^2/vi);
 
   # Declare the iterator paramters
   t_next_save = prob.clock.t + dump_dt;

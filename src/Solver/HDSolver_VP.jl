@@ -102,7 +102,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
     # hyperdiffusion term
     if params.nν > 1
-      @. ∂uᵢh∂t += -grid.Krsq^nν*params.ν*uᵢh;
+      @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
     end
 
     return nothing

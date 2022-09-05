@@ -29,7 +29,6 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                      filename = "",
                                   file_number = 0,
                                       dump_dt = 0)
-
     
   # Check if save function related parameter
   if (save)
@@ -56,6 +55,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
     nv = maximum([prob.params.nν,prob.params.nη]);
   else
     vi = prob.params.ν;
+    nv = prob.params.nν
   end
   dx = prob.grid.Lx/prob.grid.nx;
   dy = prob.grid.Ly/prob.grid.ny;
@@ -82,12 +82,9 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   time = @elapsed begin
     while (N₀ >= prob.clock.step ) && (t₀ >= prob.clock.t)   
 
-      #update the vars
-      updatevars!(prob);
-
       if (!usr_declared_dt)
-          #update the CFL condition;
-          updateCFL!(prob, t_diff; Coef = CFL_Coef);
+        #update the CFL condition;
+        updateCFL!(prob, t_diff; Coef = CFL_Coef);
       end
 
       #update the system; 

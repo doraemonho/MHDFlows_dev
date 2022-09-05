@@ -145,10 +145,10 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     #Compute the diffusion term  - ηk^2 B_i
     @. ∂Bᵢh∂t += -grid.Krsq*params.η*bᵢh;
 
-    #=# hyperdiffusion term
+    # hyperdiffusion term
     if params.nη > 1
       @. ∂Bᵢh∂t += -grid.Krsq^params.nη*params.η*bᵢh;
-    end=#
+    end
     
     return nothing
 
@@ -199,7 +199,6 @@ function MHDupdatevars!(prob)
   copyto!(vars.bxh, @view sol[:, :, :, params.bx_ind]);
   copyto!(vars.byh, @view sol[:, :, :, params.by_ind]);
   copyto!(vars.bzh, @view sol[:, :, :, params.bz_ind]);
-
 
   #Update V + B Real Conponment
   ldiv!(vars.ux, grid.rfftplan, deepcopy(vars.uxh)) # deepcopy() since inverse real-fft destroys its input

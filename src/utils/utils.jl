@@ -11,7 +11,7 @@ mutable struct SimpleGrid{i,i²,plan}
 end
 Base.eltype(grid::SimpleGrid) = eltype(grid.k);
 
-function GetSimpleGrid( nx = 64, Lx = 2π, ny = nx, Ly = Lx, nz = nx, Lz = Lx;
+function GetSimpleThreeDGrid( nx = 64, Lx = 2π, ny = nx, Ly = Lx, nz = nx, Lz = Lx;
                         nthreads=Sys.CPU_THREADS, effort=FFTW.MEASURE,
                         T=Float64, ArrayType=Array)
   nk = nx

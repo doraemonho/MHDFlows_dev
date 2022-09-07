@@ -1,6 +1,7 @@
 # ----------
 # General Function Module, providing function for setup IC of the problem
 # ----------
+include("utils.jl")
 
 """
 Construct a Cylindrical Mask Function χ for VP method
@@ -90,7 +91,7 @@ $(TYPEDFIELDS)
 """
 function DivFreeSpectraMap( Nx::Int, Ny::Int, Nz::Int;
                             P = 1, k0 = -5/3/2, b = 1, T = Float64)
-  grid = ThreeDGrid(Nx,Ny,Nz, T = T)
+  grid = GetSimpleThreeDGrid(Nx,Ny,Nz, T = T)
   return DivFreeSpectraMap( grid; P = P, k0 = k0, b = b);
 end
 

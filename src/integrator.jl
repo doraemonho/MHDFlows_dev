@@ -80,7 +80,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   end
 
   time = @elapsed begin
-    while (N₀ >= prob.clock.step ) && (t₀ >= prob.clock.t)   
+    while (N₀ >= prob.clock.step ) && (t₀ >= prob.clock.t)  
 
       if (!usr_declared_dt)
         #update the CFL condition;
@@ -94,9 +94,8 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       #update the diags
       increment!(diags)
 
-      #Corret v and b if VP method is turned on
+      #Corret b if VP method is turned on
       if (prob.flag.vp == true)
-        #MHDSolver_VP.DivVCorrection!(prob);
         prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
       end
 

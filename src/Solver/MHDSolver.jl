@@ -156,6 +156,8 @@ end
 
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
+  dealias!(sol, grid);
+
   #Update V + B Fourier Conponment
   copyto!(vars.uxh, @view sol[:, :, :, params.ux_ind]);
   copyto!(vars.uyh, @view sol[:, :, :, params.uy_ind]);
@@ -189,7 +191,7 @@ end
 function MHDupdatevars!(prob)
   vars, grid, sol, params = prob.vars, prob.grid, prob.sol, prob.params
   
-  dealias!(sol, grid)
+  dealias!(sol, grid);
   
   #Update V + B Fourier Conponment
   copyto!(vars.uxh, @view sol[:, :, :, params.ux_ind]);

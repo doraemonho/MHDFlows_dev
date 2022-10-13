@@ -58,7 +58,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   dy = prob.grid.Ly/prob.grid.ny;
   dz = prob.grid.Lz/prob.grid.nz;
   dl = minimum([dx,dy,dz]);
-  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(2*nv)/vi,CFL_Coef*dl^2/vi);
+  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(2)/vi,CFL_Coef*dl^2/vi);
 
   # Declare the iterator paramters
   t_next_save = prob.clock.t + dump_dt;
@@ -170,12 +170,12 @@ function ProbDiagnostic(prob,N; print_=false)
   dx,dy,dz = diff(prob.grid.x)[1],diff(prob.grid.y)[1],diff(prob.grid.z)[1];
   dV = dx*dy*dz;
   vx,vy,vz = prob.vars.ux,prob.vars.uy,prob.vars.uz;
-  if prob.flag.vp
-      χ  = prob.params.χ;  
-      KE =  string(round(sum(vx[χ.==0].^2+vy[χ.==0].^2 + vz[χ.==0].^2)*dV,sigdigits=3));
-  else
+ # if prob.flag.vp
+ #     χ  = prob.params.χ;  
+ #     KE =  string(round(sum(vx[χ.==0].^2+vy[χ.==0].^2 + vz[χ.==0].^2)*dV,sigdigits=3));
+ #else
       KE =  string(round(sum(vx.^2+vy.^2 + vz.^2)*dV,sigdigits=3));
-  end
+ # end
   
   tt =  string(round(prob.clock.t,sigdigits=3));
   nn = string(N);

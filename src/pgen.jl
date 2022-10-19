@@ -126,6 +126,8 @@ function MHDcalcN!(N, sol, t, clock, vars, params, grid)
   MHDSolver.MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   addforcing!(N, sol, t, clock, vars, params, grid)
+
+  dealias!(N, grid)
   
   return nothing
 end
@@ -136,6 +138,8 @@ function HDcalcN!(N, sol, t, clock, vars, params, grid)
   HDSolver.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   addforcing!(N, sol, t, clock, vars, params, grid)
+
+  dealias!(N, grid)
   
   return nothing
 end
@@ -146,6 +150,8 @@ function MHDcalcN_VP!(N, sol, t, clock, vars, params, grid)
   MHDSolver_VP.MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   addforcing!(N, sol, t, clock, vars, params, grid)
+
+  dealias!(N, grid)
   
   return nothing
 end
@@ -156,6 +162,8 @@ function HDcalcN_VP!(N, sol, t, clock, vars, params, grid)
   HDSolver_VP.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   addforcing!(N, sol, t, clock, vars, params, grid)
+
+  dealias!(N, grid)
   
   return nothing
 end

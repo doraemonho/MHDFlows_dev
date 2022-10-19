@@ -80,10 +80,10 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     #Compute the diffusion term  - νk^2 u_i
     @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh;
     
-    #=# hyperdiffusion term
+    # hyperdiffusion term
     if params.nν > 1
       @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
-    end=#
+    end
 
     return nothing
     
@@ -156,8 +156,6 @@ end
 
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
-  dealias!(sol, grid);
-
   #Update V + B Fourier Conponment
   copyto!(vars.uxh, @view sol[:, :, :, params.ux_ind]);
   copyto!(vars.uyh, @view sol[:, :, :, params.uy_ind]);
@@ -168,22 +166,22 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   copyto!(vars.bzh, @view sol[:, :, :, params.bz_ind]);
 
   #Update V + B Real Conponment
-  ldiv!(vars.ux, grid.rfftplan, deepcopy(vars.uxh))
-  ldiv!(vars.uy, grid.rfftplan, deepcopy(vars.uyh))
-  ldiv!(vars.uz, grid.rfftplan, deepcopy(vars.uzh))
-  ldiv!(vars.bx, grid.rfftplan, deepcopy(vars.bxh))
-  ldiv!(vars.by, grid.rfftplan, deepcopy(vars.byh))
-  ldiv!(vars.bz, grid.rfftplan, deepcopy(vars.bzh))  
+  ldiv!(vars.ux, grid.rfftplan, deepcopy(vars.uxh));
+  ldiv!(vars.uy, grid.rfftplan, deepcopy(vars.uyh));
+  ldiv!(vars.uz, grid.rfftplan, deepcopy(vars.uzh));
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(vars.bxh));
+  ldiv!(vars.by, grid.rfftplan, deepcopy(vars.byh));
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(vars.bzh)); 
   
   #Update V Advection
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z");
   
   #Update B Advection
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")  
+  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
+  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
+  BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z"); 
   
   return nothing
 end

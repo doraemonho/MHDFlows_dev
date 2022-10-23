@@ -90,8 +90,10 @@ Construct a Div Free Spectra Vector Map
 $(TYPEDFIELDS)
 """
 function DivFreeSpectraMap( Nx::Int, Ny::Int, Nz::Int;
+                            Lx = 2π,
+                            dev = CPU(), 
                             P = 1, k0 = -5/3/2, b = 1, T = Float64)
-  grid = GetSimpleThreeDGrid(Nx,Ny,Nz, T = T)
+  grid = GetSimpleThreeDGrid(dev; nx = Nx, Lx = Lx, ny=Ny, nz=Nz, T = T)
   return DivFreeSpectraMap( grid; P = P, k0 = k0, b = b);
 end
 

@@ -43,7 +43,7 @@ function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
     
   # Work out the seond conponement
   eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
-  @. gi  = √(1 - gi^2); 
+  @. gi  = √(1 - gi.^2); 
   @. N[:,:,:,params.ux_ind] += Fk*eⁱᶿ*gi*e2x;
   @. N[:,:,:,params.uy_ind] += Fk*eⁱᶿ*gi*e2y;
   @. N[:,:,:,params.uz_ind] += Fk*eⁱᶿ*gi*e2z;

@@ -87,7 +87,7 @@ function Problem(dev::Device;
           usr_func = [])
 
   # Declare the grid
-  grid = ThreeDGrid(dev, nx, Lx, ny, Ly, nz, Lz; T=T)
+  grid = ThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
 
   # Declare vars
   vars = SetVars(dev, grid, usr_vars; B = B_field, VP =VP_method);

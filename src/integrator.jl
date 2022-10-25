@@ -211,9 +211,6 @@ function Restart!(prob,file_path_and_name)
   mul!(uxh, prob.grid.rfftplan, prob.vars.ux);   
   mul!(uyh, prob.grid.rfftplan, prob.vars.uy);
   mul!(uzh, prob.grid.rfftplan, prob.vars.uz);
-  copyto!(prob.vars.uxh, deepcopy(uxh));
-  copyto!(prob.vars.uyh, deepcopy(uyh));
-  copyto!(prob.vars.uzh, deepcopy(uzh));
 
   #Update B Conponment
   if prob.flag.b == true
@@ -230,9 +227,6 @@ function Restart!(prob,file_path_and_name)
     mul!(bxh, prob.grid.rfftplan, prob.vars.bx);   
     mul!(byh, prob.grid.rfftplan, prob.vars.by);
     mul!(bzh, prob.grid.rfftplan, prob.vars.bz);
-    copyto!(prob.vars.bxh, deepcopy(bxh));
-    copyto!(prob.vars.byh, deepcopy(byh));
-    copyto!(prob.vars.bzh, deepcopy(bzh));  
   end
 
   #if prob.flag.vp == true

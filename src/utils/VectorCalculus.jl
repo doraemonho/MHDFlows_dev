@@ -43,7 +43,7 @@ end
 function Div(B1::Array,B2::Array,B3::Array;
              Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     nx,ny,nz = size(B1);
-    grid = GetSimpleGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
+    grid = GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
     cB1 = Div(B1,B2,B3,grid);
 
     return cB1

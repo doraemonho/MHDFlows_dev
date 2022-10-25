@@ -1,7 +1,6 @@
 # ----------
 # General Function Module, providing function for setup IC of the problem
 # ----------
-include("utils.jl")
 
 """
 Construct a Cylindrical Mask Function χ for VP method

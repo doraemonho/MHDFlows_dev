@@ -28,6 +28,7 @@ include("Solver/MHDSolver_VP.jl")
 include("DiagnosticWrapper.jl")
 include("integrator.jl")
 include("datastructure.jl")
+include("utils/utils.jl");
 include("utils/VectorCalculus.jl")
 include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
@@ -38,6 +39,7 @@ include("utils/IC.jl")
 include("pgen/A99ForceDriving.jl")
 include("pgen/TaylorGreenDynamo.jl")
 include("pgen/NegativeDamping.jl")
+include("pgen/ChoForceDriving.jl");
 
 export Problem,           
        TimeIntegrator!,

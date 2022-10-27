@@ -130,7 +130,7 @@ function LaplaceSolver(B,grid)
     Φ    = zeros(T,nx,ny,nz);
     Bh   = zeros(ComplexF32,(div(nx,2)+1,ny,nz));
     mul!(Bh, grid.rfftplan, B); 
-    @. Bh/=k⁻²;
+    @. Bh*=k⁻²;
     ldiv!(Φ, grid.rfftplan, deepcopy(Bh));
     return Φ;
 end

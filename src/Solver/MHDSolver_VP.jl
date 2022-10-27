@@ -250,9 +250,9 @@ function DivBCorrection!(prob)
   ∑ᵢkᵢBᵢh_k² = @. ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
   
   # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
-  bxh  .-= kᵢ.*∑ᵢkᵢBᵢh_k²;
-  byh  .-= kⱼ.*∑ᵢkᵢBᵢh_k²;
-  bzh  .-= kₖ.*∑ᵢkᵢBᵢh_k²;
+  @. bxh  -= kᵢ.*∑ᵢkᵢBᵢh_k²;
+  @. byh  -= kⱼ.*∑ᵢkᵢBᵢh_k²;
+  @. bzh  -= kₖ.*∑ᵢkᵢBᵢh_k²;
   
   #Update to Real Space vars
   ldiv!(vars.bx, grid.rfftplan, deepcopy(bxh));# deepcopy() since inverse real-fft destroys its input

@@ -3,11 +3,11 @@ module MHDFlows
 using 
   CUDA,
   Statistics,
-  SpecialFunctions,
   Reexport,
   DocStringExtensions,
   HDF5,
-  FFTW
+  FFTW,
+  ProgressMeter
 
 @reexport using FourierFlows
 
@@ -33,13 +33,14 @@ include("utils/VectorCalculus.jl")
 include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
 include("utils/IC.jl")
+include("utils/UserInterface.jl")
 
 
 #pgen module
 include("pgen/A99ForceDriving.jl")
 include("pgen/TaylorGreenDynamo.jl")
 include("pgen/NegativeDamping.jl")
-include("pgen/ChoForceDriving.jl");
+#include("pgen/ChoForceDriving.jl");
 
 export Problem,           
        TimeIntegrator!,

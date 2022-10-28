@@ -11,10 +11,10 @@ Three Dimensional Magnetohydrodynamic(MHD) pseudospectral solvers written in Jul
 This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set up the module. The main purpose of MHDFlows.jl aims to solve the portable 3D MHD problems on personal computer instead of cluster. Utilizing the Nvidia CUDA technology, the MHDFlows.jl could solve the front-end MHD turbulence research problems in the order of few-ten minutes by using a mid to high end gaming display card (see Memory usage & speed section). Feel free to modify yourself for your own research purpose.
 
 ## Version No.
-v 0.1.0
+v 0.1.3
 
 ## Installation Guide & compatibility 
-The current version is tested on v1.5.3/1.7.3/1.8 version.
+The current version is tested on v1.5.3/1.7.3/1.8.2 version.
 
 Currently, you have two way of installing MHDFlows.jl
 
@@ -28,7 +28,6 @@ Currently, you have two way of installing MHDFlows.jl
    ```
 
 
-
 ## Scalability 
 The MHD Solver could either run on CPU or GPU. The scalability is same as Fourierflows, which is restricted to either a single CPU or single GPU. This restriction may change in the future depending on the development of FourierFlows. If you are running the package using GPU, the CUDA package is needed for the computation. Check out [CUDA.jl](https://juliagpu.github.io/CUDA.jl/stable/lib/driver/#Device-Management) for more detail. 
 
@@ -40,7 +39,7 @@ The MHD Solver could either run on CPU or GPU. The scalability is same as Fourie
 
 For GPU users, here are some useful numbers of memory requirement for choosing the resolution of the simulation. You may end up getting higher resolution for the same memory.
 
-| Memory Size | Maximum Resolution ($N^3$ )    |
+| Memory Size | Maximum Resolution ($N^3$)    |
 | ----------- | ------------------------------ |
 | 6 GB        | $256^3$ (pure HD simulation) |
 | 10 GB       | $300^3$ (pure MHD simulation) |

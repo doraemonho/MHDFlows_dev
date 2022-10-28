@@ -56,7 +56,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   else
 
-  	@warn "Warning : Unknown direction is declerad"
+  	error("Warning : Unknown direction is declerad")
 
   end
 

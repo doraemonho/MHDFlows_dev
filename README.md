@@ -39,7 +39,7 @@ The MHD Solver could either run on CPU or GPU. The scalability is same as Fourie
 
 For GPU users, here are some useful numbers of memory requirement for choosing the resolution of the simulation. You may end up getting higher resolution for the same memory.
 
-| Memory Size | Maximum Resolution ($N^3$)    |
+| Memory Size | Maximum Resolution ( $N^3$ )    |
 | ----------- | ------------------------------ |
 | 6 GB        | $256^3$ (pure HD simulation) |
 | 10 GB       | $300^3$ (pure MHD simulation) |

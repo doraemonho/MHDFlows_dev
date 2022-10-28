@@ -40,7 +40,6 @@ include("utils/UserInterface.jl")
 include("pgen/A99ForceDriving.jl")
 include("pgen/TaylorGreenDynamo.jl")
 include("pgen/NegativeDamping.jl")
-#include("pgen/ChoForceDriving.jl");
 
 export Problem,           
        TimeIntegrator!,

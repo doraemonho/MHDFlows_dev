@@ -97,19 +97,19 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   # declare the var u_i, b_i for computation
 	if direction == "x"
-
+    a   = 1;
 		uᵢ  = vars.ux;
 		bᵢ  = vars.bx; 
 		∂Bᵢh∂t = @view N[:,:,:,params.bx_ind];
 
 	elseif direction == "y"
-
+    a   = 2;
 		uᵢ  = vars.uy;
 		bᵢ  = vars.by; 
 		∂Bᵢh∂t = @view N[:,:,:,params.by_ind];
 
 	elseif direction == "z"
-
+    a   = 3;
 		uᵢ  = vars.uz;
 		bᵢ  = vars.bz; 
 		∂Bᵢh∂t = @view N[:,:,:,params.bz_ind];
@@ -121,10 +121,9 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 	end
 
     @. ∂Bᵢh∂t*= 0;
-    
     #Compute the first term, im ∑_j k_j*(b_iu_j - u_ib_j)
-    for (bⱼ,uⱼ,kⱼ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
-
+    for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1,2,3])
+      if a != j
         # Initialization 
         @. vars.nonlin1  *= 0;
         @. vars.nonlinh1 *= 0;
@@ -135,7 +134,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
         mul!(uᵢbⱼ_minus_bᵢuⱼh, grid.rfftplan, uᵢbⱼ_minus_bᵢuⱼ);
         # Perform the Actual Advection update
         @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼ_minus_bᵢuⱼh;  
-
+      end
     end
     
     #Compute the diffusion term  - ηk^2 B_i

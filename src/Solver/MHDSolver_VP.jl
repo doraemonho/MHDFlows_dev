@@ -155,7 +155,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     χ = params.χ;  
 
     #Compute the first term, im ∑_j k_j*(b_iu_j - u_ib_j)
-    for (bⱼ,uⱼ,kⱼ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
+    for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1,2,3])
 
         # Initialization 
         @. vars.nonlin1  *= 0;
@@ -166,7 +166,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
         @. uᵢbⱼ_minus_bᵢuⱼ = uᵢ*bⱼ - bᵢ*uⱼ;
         mul!(uᵢbⱼ_minus_bᵢuⱼh, grid.rfftplan, uᵢbⱼ_minus_bᵢuⱼ);
         # Perform the Actual Advection update
-        @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼ_minus_bᵢuⱼh;        
+        @. ∂Bᵢh∂t += im*(1 - δ(a,j))*kⱼ*uᵢbⱼ_minus_bᵢuⱼh;        
     
     end
 

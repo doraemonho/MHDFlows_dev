@@ -200,6 +200,21 @@ function getL(iv,jv,kv,grid)
   return Li,Lj,Lk    
 end 
 
+function Get_Reλ_and_lλ(iv,jv,kv,ν::Number;Lx=2π)
+  grid = GetSimpleThreeDGrid(nx,Lx;T=T);
+  Reλ,lλ = Get_Reλ_and_lλ(iv,jv,kv,ν,grid);
+  return Reλ,lλ;
+end
+
+function Get_Reλ_and_lλ(iv,jv,kv,ν::Number,grid)
+  ω1,ω2,ω3 = Curl(iv,jv,kv,grid);
+  ω_rms = sqrt(var(ω1) + var(ω2) + var(ω3));
+  u_rms = sqrt(var(iv) + var(jv) + var(kv));
+  lλ = √(5)*u_rms/ω_rms;
+  Reλ =  u_rms/√(3)*lλ/ν;
+  return Reλ,lλ;
+end
+
 
 """
 Function of computing 2D/3D Spectra

@@ -71,12 +71,12 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
   #Corret v and b if VP method is turned on
   if (prob.flag.vp == true)
-    #MHDSolver_VP.DivVCorrection!(prob);
-    prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
+    #VPSolver.DivVCorrection!(prob);
+    prob.flag.b == true ? VPSolver.DivBCorrection!(prob) : nothing;
   end
 
   # Print the wellcome message
-  WellcomeMessage()
+  WellcomeMessage();
 
   # check if user enable the dynamical dashboard
   if dynamical_dashboard 
@@ -108,7 +108,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
       #Corret b if VP method is turned on
       if (prob.flag.vp == true)
-        prob.flag.b == true ? MHDSolver_VP.DivBCorrection!(prob) : nothing;
+        prob.flag.b == true ? VPSolver.DivBCorrection!(prob) : nothing;
       end
 
       #Dye Update

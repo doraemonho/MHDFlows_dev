@@ -110,10 +110,10 @@ function Equation_with_forcing(dev, grid::AbstractGrid; B = false, VP= false)
   Nₗ = ifelse(B,6,3)
   L = zeros(dev, T, (grid.nkr, grid.nl, grid.nm, Nₗ));
 
-  if (B)
-  	calcN! = ifelse(VP,MHDcalcN_VP!,MHDcalcN!);
+  if (B) 
+  	calcN! = MHDcalcN!;
   else
-  	calcN! = ifelse(VP, HDcalcN_VP!, HDcalcN!);
+  	calcN! = HDcalcN!;
   end
   
   return FourierFlows.Equation(L,calcN!, grid);
@@ -136,30 +136,6 @@ function HDcalcN!(N, sol, t, clock, vars, params, grid)
   dealias!(sol, grid)
   
   HDSolver.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
-  
-  addforcing!(N, sol, t, clock, vars, params, grid)
-
-  dealias!(N, grid)
-  
-  return nothing
-end
-
-function MHDcalcN_VP!(N, sol, t, clock, vars, params, grid)
-  dealias!(sol, grid)
-  
-  MHDSolver_VP.MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
-  
-  addforcing!(N, sol, t, clock, vars, params, grid)
-
-  dealias!(N, grid)
-  
-  return nothing
-end
-
-function HDcalcN_VP!(N, sol, t, clock, vars, params, grid)
-  dealias!(sol, grid)
-  
-  HDSolver_VP.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   addforcing!(N, sol, t, clock, vars, params, grid)
 

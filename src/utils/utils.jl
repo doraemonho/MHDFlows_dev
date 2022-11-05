@@ -1,19 +1,26 @@
-mutable struct SimpleGrid{i,i²,plan}
-    k   :: i
-    l   :: i
-    m   :: i
-    kr  :: i
-    Ksq :: i²
-    invKsq  :: i²
-    Krsq    :: i²
-    invKrsq :: i²
-    rfftplan :: plan
+mutable struct SimpleGrid{i,i²,plan,D}
+  nx  :: Int
+  ny  :: Int
+  nz  :: Int
+  nkr :: Int
+  nl  :: Int
+  nm  :: Int
+  k   :: i
+  l   :: i
+  m   :: i
+  kr  :: i
+  Ksq :: i²
+  invKsq  :: i²
+  Krsq    :: i²
+  invKrsq :: i²
+  rfftplan :: plan
+  device :: D
 end
 Base.eltype(grid::SimpleGrid) = eltype(grid.k);
 
 function GetSimpleThreeDGrid(nx = 64, Lx = 2π, ny = nx, Ly = Lx, nz = nx, Lz = Lx;
                              nthreads=Sys.CPU_THREADS, effort=FFTW.MEASURE,
-                             T=Float64, ArrayType=Array)
+                             T=Float64, ArrayType=Array,dev=CPU())
   nk = nx
   nl = ny
   nm = nz
@@ -35,5 +42,6 @@ function GetSimpleThreeDGrid(nx = 64, Lx = 2π, ny = nx, Ly = Lx, nz = nx, Lz = 
   FFTW.set_num_threads(nthreads);
   rfftplan = plan_rfft(ArrayType{T, 3}(undef, nx, ny, nz))
   
-  return SimpleGrid(k,l,m,kr,Ksq, invKsq, Krsq, invKrsq, rfftplan);
+  return SimpleGrid(nx, ny, nz, nkr, nl, nm,
+                    k, l, m, kr, Ksq, invKsq, Krsq, invKrsq, rfftplan,dev);
 end

@@ -139,9 +139,9 @@ function DivFreeSpectraMap( grid;
   dealias!(Fyh, grid)
   dealias!(Fzh, grid)
 
-  ldiv!(Fx, grid.rfftplan, deepcopy(Fxh));  
-  ldiv!(Fy, grid.rfftplan, deepcopy(Fyh));
-  ldiv!(Fz, grid.rfftplan, deepcopy(Fzh));
+  ldiv!(Fx, grid.rfftplan, Fxh);  
+  ldiv!(Fy, grid.rfftplan, Fyh);
+  ldiv!(Fz, grid.rfftplan, Fzh);
 
   return Fx,Fy,Fz;
   

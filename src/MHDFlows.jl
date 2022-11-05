@@ -7,12 +7,15 @@ using
   DocStringExtensions,
   HDF5,
   FFTW,
-  ProgressMeter
+  ProgressMeter,
+  TimerOutputs
 
 @reexport using FourierFlows
 
+# FFT Wrapper
 using LinearAlgebra: mul!, ldiv!
 import Base: show, summary
+
 
 "Abstract supertype for problem."
 abstract type AbstractProblem end
@@ -23,8 +26,7 @@ include("Problems.jl")
 include("pgen.jl")
 include("Solver/HDSolver.jl")
 include("Solver/MHDSolver.jl")
-include("Solver/HDSolver_VP.jl")
-include("Solver/MHDSolver_VP.jl")
+include("Solver/VPSolver.jl")
 include("DiagnosticWrapper.jl")
 include("integrator.jl")
 include("datastructure.jl")
@@ -34,7 +36,6 @@ include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
 include("utils/IC.jl")
 include("utils/UserInterface.jl")
-
 
 #pgen module
 include("pgen/A99ForceDriving.jl")
@@ -59,6 +60,7 @@ export Problem,
        VectorPotential,
        LaplaceSolver,
        getL,
+       Get_Reλ_and_lλ,
        spectralline,
        ⋅, ×
 end

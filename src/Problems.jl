@@ -109,7 +109,7 @@ struct MHDFlowsProblem{T, A<:AbstractArray, Tg<:AbstractFloat, TL, Dye, usr_foo}
     "the user defined function"
      usr_func :: usr_foo
     "the Dye module"
-          dye :: Dye     
+          dye :: Dye    
 end
 
 """
@@ -136,6 +136,7 @@ function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::Abstract
   dye = DyeContructer(dev, DyeFlag, grid);
 
   usr_func = length(usr_func) == 0 ? [nothingfunction] : usr_func;
+
   return MHDFlowsProblem(sol, clock, eqn, grid, vars, params, timestepper, flag, usr_func, dye)
 end
 

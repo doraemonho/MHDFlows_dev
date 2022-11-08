@@ -46,7 +46,7 @@ struct HVars{Aphys, Atrans, usr_var} <: MHDVars
     usr_vars :: usr_var
 end
 
-struct MHDParams_VP{Aphys,usr_param,ts} <: AbstractParams
+struct MHDParams_VP{Aphys,usr_param} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: Number
@@ -82,12 +82,9 @@ struct MHDParams_VP{Aphys,usr_param,ts} <: AbstractParams
   "User defined params"
   usr_params :: usr_param
 
-   "the Debug Timer" 
-   debugTimer :: ts
-
 end
 
-struct HDParams_VP{Aphys,usr_param,ts} <: AbstractParams
+struct HDParams_VP{Aphys,usr_param} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: Number
@@ -110,12 +107,10 @@ struct HDParams_VP{Aphys,usr_param,ts} <: AbstractParams
 
   "User defined params"
   usr_params :: usr_param   
-  
-  "the Debug Timer" 
-   debugTimer :: ts
+
 end
 
-struct HDParams{usr_param,ts} <: AbstractParams
+struct HDParams{usr_param} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
    ν :: Number
@@ -132,11 +127,9 @@ struct HDParams{usr_param,ts} <: AbstractParams
 
   "User defined params"
  usr_params :: usr_param
-  "the Debug Timer" 
- debugTimer :: ts
 end
 
-struct MHDParams{usr_param,ts} <: AbstractParams
+struct MHDParams{usr_param} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: Number
@@ -161,9 +154,6 @@ struct MHDParams{usr_param,ts} <: AbstractParams
   
   "User defined params"
  usr_params :: usr_param
-
-    "the Debug Timer" 
- debugTimer :: ts
 
 end
 
@@ -199,21 +189,19 @@ end
                      B = false, VP = false, ν = 0, η = 0, nν = 0, nη = 0) where Dev
   T = eltype(grid);
   usr_param = typeof(usr_params);
-  to = TimerOutput();
-
   if (B)
     if (VP)
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z B₀x B₀y B₀z
-      params = MHDParams_VP(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, χ, U₀x, U₀y, U₀z, B₀x, B₀y, B₀z, usr_params, to)
+      params = MHDParams_VP(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, χ, U₀x, U₀y, U₀z, B₀x, B₀y, B₀z, usr_params)
     else
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params, to);
+      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params);
     end
   else
     if (VP)
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z
-      params = HDParams_VP(ν, nν, 1, 2, 3, calcF, χ, U₀x, U₀y, U₀z, usr_params, to);
+      params = HDParams_VP(ν, nν, 1, 2, 3, calcF, χ, U₀x, U₀y, U₀z, usr_params);
     else
-      params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params, to);
+      params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params);
     end
   end
 

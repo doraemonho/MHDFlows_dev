@@ -11,16 +11,18 @@ export
 
 using
   CUDA,
-  TimerOutputs
+  Reexport,
+  DocStringExtensions
+
+@reexport using FourierFlows
 
 using LinearAlgebra: mul!, ldiv!
-include("VPSolver.jl")
+using FourierFlows: parsevalsum
+
 
 # δ function
 δ(a::Int,b::Int) = ( a == b ? 1 : 0 );
 
-# checking function of VP method
-VP_is_turned_on(params) = hasproperty(params,:U₀x);
 
 function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
@@ -55,45 +57,37 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   @. ∂uᵢh∂t*= 0;
 
   for (uᵢ,kᵢ) ∈ zip([vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
-    for (uⱼ,kⱼ,j) ∈ zip([vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
-      
-      @timeit_debug params.debugTimer "Pseudo" begin
-        uᵢuⱼ  = vars.nonlin1;    
-        uᵢuⱼh = vars.nonlinh1;
-        # Pre-Calculation in Real Space
-        @. uᵢuⱼ = uᵢ*uⱼ;
-      end
+        for (uⱼ,kⱼ,j) ∈ zip([vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
 
-      @timeit_debug params.debugTimer "Spectral" begin
-        # Fourier transform 
-        mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
-      end
+          # Initialization 
+          @. vars.nonlin1 *= 0;
+          uᵢuⱼ  = vars.nonlin1;    
+          uᵢuⱼh = vars.nonlinh1;
+          
+          # Pre-Calculation in Real Space
+          @. uᵢuⱼ = uᵢ*uⱼ;
 
-      @timeit_debug params.debugTimer "Advection" begin
-        # Perform the actual calculation
-        @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
-      end
-        
+          # Fourier transform 
+          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
+          
+          # Perform the actual calculation
+          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
+            
+        end
     end
-  end
-  
-  # Updating the solid domain if VP flag is ON
-  if VP_is_turned_on(params) 
-    @timeit_debug params.debugTimer "VP Uᵢ" VPSolver.VP_UᵢUpdate!(∂uᵢh∂t, kₐ.*k⁻², a, clock, vars, params, grid)
-  end
+    
+    #Compute the diffusion term  - νk^2 u_i
+    uᵢ = direction == "x" ? vars.ux : direction == "y" ? vars.uy : vars.uz;
+    uᵢh = vars.nonlinh1;
+    mul!(uᵢh, grid.rfftplan, uᵢ); 
+    @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh;
 
-  #Compute the diffusion term  - νk^2 u_i
-  uᵢ = direction == "x" ? vars.ux : direction == "y" ? vars.uy : vars.uz;
-  uᵢh = vars.nonlinh1;
-  mul!(uᵢh, grid.rfftplan, uᵢ); 
-  @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh;
+    # hyperdiffusion term
+    if params.nν > 1
+      @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
+    end
 
-  # hyperdiffusion term
-  if params.nν > 1
-    @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
-  end
-
-  return nothing
+    return nothing
     
 end
 

@@ -9,7 +9,6 @@ export
 	MHDcalcN_advection!,
 	MHDupdatevars!
 
-
 using
   CUDA,
   TimerOutputs

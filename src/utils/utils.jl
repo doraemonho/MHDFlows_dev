@@ -12,13 +12,8 @@ end
 Base.eltype(grid::SimpleGrid) = eltype(grid.k);
 
 function GetSimpleThreeDGrid(nx = 64, Lx = 2π, ny = nx, Ly = Lx, nz = nx, Lz = Lx;
-<<<<<<< HEAD
-                             nthreads=Sys.CPU_THREADS, effort=FFTW.MEASURE,
-                             T=Float64, ArrayType=Array)
-=======
                              nthreads=Threads.nthreads(), effort=FFTW.MEASURE,
                              T=Float64, ArrayType=Array,dev=CPU())
->>>>>>> cd53c86 (pre  v0.1.4 Update)
   nk = nx
   nl = ny
   nm = nz

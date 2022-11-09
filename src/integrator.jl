@@ -100,9 +100,6 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       stepforward!(prob.sol, prob.clock, prob.timestepper, prob.eqn, 
                    prob.vars, prob.params, prob.grid);
 
-      # dealias
-      dealias!(prob.sol, prob.grid);
-
       #update the diags
       increment!(diags);
 

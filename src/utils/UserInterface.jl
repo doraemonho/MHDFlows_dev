@@ -83,7 +83,7 @@ function ProbDiagnostic(prob)
 end
 
 # function for updating dynamical dashboard
-function Dynamical_dashboard(prob,prog,N₀,t₀)
+function Dynamic_Dashboard(prob,prog,N₀,t₀)
   generate_showvalues(iter, Stats) = () -> [(:Progress,iter), (:Statistics,stats)];
   n = prob.clock.step;
   t    = round(prob.clock.t,sigdigits=3);

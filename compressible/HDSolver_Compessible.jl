@@ -1,4 +1,4 @@
-module MHDSolver_compressible
+module HDSolver_compressible
 # ----------
 # Compessible Navier–Stokes Solver for 3D Magnetohydrodynamics Problem
 # ----------
@@ -6,16 +6,14 @@ module MHDSolver_compressible
 export UᵢUpdate!,
        ρUpdate!
 
-include("MHDSolver.jl");
-BᵢUpdate = MHDSolver.BᵢUpdate;
 using LinearAlgebra: mul!, ldiv!
 
 # Definition of physical parameter between real space and spectral sapce
-# fft  - space parameters -> ρ px py pz bx by bz 
-# real - space parameters -> ρ ux uy uz bx by bz
+# fft  - space parameters -> ρ px py pz 
+# real - space parameters -> ρ ux uy uz
 
 # Solving the continuity equation
-# ∂ρ∂t = -∇· (ρv) => ∑ᵢ -im*kᵢ(ρvᵢ)ₕ
+# ∂ρ∂t = -∇· (ρv) => ∑_i -im*kᵢ(ρvᵢ)ₕ
 function ρUpdate!(N, sol, t, clock, vars, params, grid)
 
   ∂ρ∂t = @view   N[:,:,:,params.ρ_ind];
@@ -36,7 +34,7 @@ end
 
 # Solving the momentum equation
 # ∂pᵢ∂t + ∑ⱼ ∂/∂xⱼ( ρ*uᵢuⱼ + δᵢⱼP_tot - bᵢbⱼ - 2νρSᵢⱼ)) = ρFᵢ
-function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction = "x")
+function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction = "x")
   ν = params.ν;
   cₛ = params.cₛ;
   k₁,k₂,k₃    = grid.kr,grid.l,grid.m;
@@ -47,40 +45,37 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction = "x")
     kᵢ   = grid.kr;
     uᵢ   = vars.ux;
     uᵢh  = vars.uxh;
-    bᵢ   = vars.bx;
     ∂pᵢh∂t = @view N[:,:,:,params.ux_ind];
   elseif direction == "y"
     a    = 2;
     kᵢ   = grid.l;
     uᵢ   = vars.uy;
     uᵢh  = vars.uyh;
-    bᵢ   = vars.by;
     ∂pᵢh∂t = @view N[:,:,:,params.uy_ind];
   elseif direction == "z"
     a    = 3;
     kᵢ   = grid.m;
     uᵢ   = vars.uz;
     uᵢh  = vars.uzh;
-    bᵢ   = vars.bz;
     ∂pᵢh∂t = @view N[:,:,:,params.uz_ind];
   end
 
   @. ∂pᵢh∂t*=0;
   #momentum and magnetic field part
-  bᵢbⱼ_minus_ρuᵢuⱼ  = vars.nonlin1;  
-  bᵢbⱼ_minus_ρuᵢuⱼh = vars.nonlinh1;
-  for (uⱼ,bⱼ,kⱼ) ∈ zip([vars.ux,vars.uy,vars.uz],[vars.bx,vars.by,vars.bz],[grid.kr,grid.l,grid.m])
+  ρuᵢuⱼ  = vars.nonlin1;  
+  ρuᵢuⱼh = vars.nonlinh1;
+  for (uⱼ,kⱼ) ∈ zip([vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
     # pseudo part
-    @. bᵢbⱼ_minus_ρuᵢuⱼ  = bᵢ*bⱼ- ρ*uᵢ*uⱼ;
+    @. ρuᵢuⱼ  = ρ*uᵢ*uⱼ;
     # spectral part
-    mul!(bᵢbⱼ_minus_ρuᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_ρuᵢuⱼ);
-    @. ∂pᵢh∂t += im*kⱼ*bᵢbⱼ_minus_ρuᵢuⱼh;
+    mul!(ρuᵢuⱼh, grid.rfftplan, ρuᵢuⱼ);
+    @. ∂pᵢh∂t -= im*kⱼ*ρuᵢuⱼh;
   end
 
   # pressure part
   P_tot  = vars.nonlin1;  
   P_toth = vars.nonlinh1;
-  @. P_tot= ρ*cₛ^2 + vars.bx^2 + vars.by^2 + vars.bz^2
+  @. P_tot= ρ*cₛ^2;
   mul!(P_toth, grid.rfftplan, P_tot);
   @. ∂pᵢh∂t -= im*kᵢ*P_toth;
 
@@ -98,6 +93,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction = "x")
     mul!(ρS_ijh, grid.rfftplan, ρSᵢⱼ);
     @. ∂pᵢh∂t -= kⱼ*2*ν*ρSᵢⱼh;
   end
+
   return nothing;
 end
 
@@ -108,15 +104,12 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
   ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
   ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
-  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]));
-  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]));
-  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind]));
 
   #Update momentum back to velocity
   @. vars.ux/=vars.ρ;
   @. vars.uy/=vars.ρ;
   @. vars.uz/=vars.ρ;
-  
+
   #Copy the spectral conponment to sketch array
   mul!(var.uxh, grid.rfftplan, var.ux);
   mul!(var.uyh, grid.rfftplan, var.uy);
@@ -129,12 +122,7 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x");
   UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y");
   UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z");
-  
-  #Update B Advection
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x");
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y");
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z"); 
-  
+
   return nothing;
 end
 

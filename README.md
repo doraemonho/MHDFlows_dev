@@ -41,7 +41,7 @@ For GPU users, here are some useful numbers of memory requirement for choosing t
 
 | Memory Size | Maximum Resolution ( $N^3$ )    |
 | ----------- | ------------------------------ |
-| 6 GB        | $256^3$ (pure HD simulation) |
+| 6 GB        | $256^3$ (pure MHD simulation) |
 | 10 GB       | $300^3$ (pure MHD simulation) |
 
 **Speed**

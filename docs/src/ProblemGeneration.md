@@ -8,7 +8,7 @@ At the step of problem declaration, you declare the key feature of the simulatio
 5. feature that you want to include (force function/ Volume penalization method/ Dye tracing)
 6. user defined functions/ data structure will be used during the simulation 
 
-We use `` MHDFlows.Problem`` to declare a problem. Below is an example of declaring a 3D HD simulation using GPU
+We use the `` MHDFlows.Problem`` function to declare a problem. Below is an example of declaring a 3D HD simulation on GPU
 
 
 ```
@@ -73,7 +73,7 @@ MHDFlows Problem
         ├────────── clock: clock
         └──── timestepper: RK4TimeStepper
 ```
-The function will return a problem object `MHDFlowsProblem`, it contains all the data strcuture will be used in the simulation. It can be break into differents child objects
+The function will return a type object `MHDFlowsProblem`, it contains all the data strcuture will be used in the simulation. It can be break into differents child objects
 
 ```
   │     MHDFlows Problems           
@@ -87,13 +87,16 @@ The function will return a problem object `MHDFlowsProblem`, it contains all the
        	├─────────── dye : dye
         └──── timestepper: ts
 ```
-To express/visualize a child object (for example ``grid``) simpily type ``GPUprob.grid``. For each child objects,
+To access/visualize a child object (for example ``grid``) simpily type ``GPUprob.grid``. For each child objects,
 
 1. grid : contains all the information about the grid (Real Space: ``Lx/Ly/Lz/Nx/Ny/Nz...``, Spectral Space:``kr/Krsq...``)
-2. params : constains the index of 
-3. vars: 
-4. sol : 
-5. clock :
-6. usr_func :
-7. dye :
-8. ts :
+2. params : Array indexing/ float type parameters ($\nu/\eta$)
+3. vars: Physical variables ($\vec{v}/\vec{b}$) in real space
+4. sol : Physical variables ($\vec{v}/\vec{b}$) in spectral space
+5. clock : time intragrator infromation ($t/dt/step$)
+6. usr_func : user defined function to execute after each time step
+7. dye : Dye modules
+8. ts : timestepper, constains the sketch array and time integration iterator.
+
+!!! warning
+User shouldn't change any physical variables (b/v) when using usr_func. It is for visualization purpose only. To interact with physical variables during the timestep, consider the force function. 

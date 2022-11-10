@@ -3,6 +3,19 @@
 # ----------
 
 """
+    TimeIntegrator!(prob,t₀,N₀,
+                 usr_dt = 0.0,
+               CFL_Coef = 0.25,
+           CFL_function = nothingfunction,
+                  diags = [],
+      dynamic_dashboard = true,
+            loop_number = 100,
+                   save = false,
+               save_loc = "",
+               filename = "",
+            file_number = 0,
+                dump_dt = 0)
+
 Time Integrator for MHDFlows problem 
   Keyword arguments
 =================
@@ -14,7 +27,6 @@ Time Integrator for MHDFlows problem
 - `CFL_function` : user defined CFL function 
 - `loop_number` : iteration count for displaying the diagnostic information (T type : Int)
 - `save` : save option for saving the hdf5 file (T type: true/false)
-$(TYPEDFIELDS)
 """
 function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
                                        usr_dt = 0.0,
@@ -138,7 +150,6 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   return nothing;
 
 end
-
 
 function getCFL!(prob, t_diff; Coef = 0.3);
   #Solving the dt of CFL condition using dt = Coef*dx/v

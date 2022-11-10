@@ -2,6 +2,16 @@
 # Vector Calculus Module, Only work on peroideric boundary!
 # ----------
 
+"""
+    Curl(B1,B2,B3;Lx=2π)
+
+Funtion of computing ∇ × A⃗ using the fourier method
+  Keyword arguments
+=================
+- `B1/B2/B3`:  3D i/j/k vector field array 
+- `Lx/Ly/Lz`: Length Scale for the box(T type: Int)
+- `T` : Data Type of the input Array
+"""
 function Curl(B1::Array,B2::Array,B3::Array;
               Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     # Wrapper for Curl Function
@@ -40,6 +50,16 @@ function Curl(B1,B2,B3,grid)
     return cB1,cB2,cB3;
 end
 
+"""
+    Div(B1,B2,B3;Lx=2π)
+
+Funtion of computing ∇ ⋅ ⃗A⃗using the fourier method
+  Keyword arguments
+=================
+- `B1/B2/B3`:  3D i/j/k vector field array 
+- `Lx/Ly/Lz`: Length Scale for the box(T type: Int)
+- `T` : Data Type of the input Array
+"""
 function Div(B1::Array,B2::Array,B3::Array;
              Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     nx,ny,nz = size(B1);
@@ -112,6 +132,16 @@ end
 #∇·(A1,A2,A3;Lx = 2π, Ly = Lx, Lz = Lx,T = eltype(A1)) =   Div(A1,A2,A3;Lx = Lx, Ly = Ly, Lz = Lz,T = eltype(A1));
 
 
+"""
+    LaplaceSolver(B)
+
+Funtion of Solving ΔΦ = B using the fourier method
+  Keyword arguments
+=================
+- `B`:  3D scalar array 
+- `Lx/Ly/Lz`: Length Scale for the box(T type: Int)
+- `T` : Data Type of the input Array
+"""
 function LaplaceSolver(B; Lx=2π, Ly = Lx, Lz = Lx, T = Float32)
     nx,ny,nz = size(B);
     grid = GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);

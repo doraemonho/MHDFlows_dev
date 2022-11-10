@@ -7,30 +7,30 @@
 nothingfunction(args...) = nothing;
 
 """
-function Problem(dev::Device=CPU();
-  # Numerical parameters
-                nx = 64,
-                ny = nx,
-                nz = nx,
-                Lx = 2π,
-                Ly = Lx,
-                Lz = Lx,
-   # Drag and/or hyper-viscosity for velocity/B-field
-                 ν = 0,
-                nν = 1,
-                 μ = 0,
-                 η = 0,
-                nμ = 0,
-   # Declare if turn on magnetic field/VP method/Dye Module
-    	     B_field = false,
-         VP_method = false,
-        Dye_Module = false
-  # Timestepper and equation options
-           stepper = "RK4",
-             calcF = nothingfunction,
-  # Float type and dealiasing
-                 T = Float32,
-  aliased_fraction = 1/3)
+    function Problem(dev::Device=CPU();
+      # Numerical parameters
+                    nx = 64,
+                    ny = nx,
+                    nz = nx,
+                    Lx = 2π,
+                    Ly = Lx,
+                    Lz = Lx,
+       # Drag and/or hyper-viscosity for velocity/B-field
+                     ν = 0,
+                    nν = 1,
+                     μ = 0,
+                     η = 0,
+                    nμ = 0,
+       # Declare if turn on magnetic field/VP method/Dye Module
+        	     B_field = false,
+             VP_method = false,
+            Dye_Module = false
+      # Timestepper and equation options
+               stepper = "RK4",
+                 calcF = nothingfunction,
+      # Float type and dealiasing
+                     T = Float32,
+      aliased_fraction = 1/3)
 
 Construct a 3D `Problem` on device `dev`.
 Keyword arguments

@@ -3,13 +3,14 @@
 # ----------
 
 """
+    Cylindrical_Mask_Function(grid)
+
 Construct a Cylindrical Mask Function χ for VP method
   Keyword arguments
 =================
 - `grid`: MHDFlows problem's grid
 - `R₂` : Outwards radius boundary
 - `R₁` : Inwards radius boundary
-$(TYPEDFIELDS)
 """
 function Cylindrical_Mask_Function(grid;R₂=0.82π,R₁=0.0π)
   nx,ny,nz = grid.nx,grid.ny,grid.nz;
@@ -26,6 +27,8 @@ function Cylindrical_Mask_Function(grid;R₂=0.82π,R₁=0.0π)
 end
 
 """
+    SetUpProblemIC!(prob)
+
 function of setting up the initial condition of the problem
   Keyword arguments
 =================
@@ -33,7 +36,6 @@ function of setting up the initial condition of the problem
 - `ux/uy/uz` : velocity in real space
 - `bx/by/bz` : B-field in real space
 - `U₀x/U₀y/U₀z/B₀x/B₀y/B₀z` : VP method parameter
-$(TYPEDFIELDS)
 """
 function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
                                bx = [], by = [], bz =[],
@@ -81,13 +83,14 @@ end
 
 
 """
+    DivFreeSpectraMap(Nx,Ny,Nz)
+
 Construct a Div Free Spectra Vector Map with power-law relation
   Keyword arguments
 =================
 - `Nx/Ny/Nz`: size of the Vector Map
 - `k0` : Slope of the Map 
 - `b`  : Anisotropy of the Map
-$(TYPEDFIELDS)
 """
 function DivFreeSpectraMap( Nx::Int, Ny::Int, Nz::Int;
                             Lx = 2π,
@@ -149,11 +152,12 @@ end
 
 
 """
+    readMHDFlows(FileName)
+
 Function of reading the HDF5 file written by MHDFlows
   Keyword arguments
 =================
-- `FileName`: string of the file location of the files
-$(TYPEDFIELDS)
+- `FileName`: string of the file path location of the files
 """
 function readMHDFlows(FileName)
     F32(A::Array) = convert(Array{Float32,3},A);

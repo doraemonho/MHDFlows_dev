@@ -8,7 +8,7 @@ Three Dimensional Magnetohydrodynamic(MHD) simulation packages natively written 
 3. Incompressible  HD/MHD simulation with volume penalization method
 4. Passive Dye Tracer (Experimental Feature)
 
-This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set up the module. The main purpose of MHDFlows.jl aims to solve the portable 3D MHD problems on personal computer instead of cluster. With native GPU accerlation support, the MHDFlows.jl could solve the front-end MHD turbulence research problems in the order of few-ten minutes by using a mid to high end gaming display card (see Memory usage & speed section). Feel free to modify yourself for your own research purpose.
+This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/FourierFlows.jl) package to set up the module. The main purpose of MHDFlows.jl aims to solve the portable 3D MHD problems on personal computer instead of cluster. With native GPU accerlation support, the MHDFlows.jl could solve the front-end MHD turbulence research problems in the order of few-ten minutes by using a mid to high end gaming display card (see Memory usage & speed section). Feel free to modify yourself for your own research purpose.  
 
 ## Examples
 Few jupyter notebook examples were set up to illustrate the workflow of using the package. See `example\` for more detail.  The documentation is work in progress and will be available in the future. 

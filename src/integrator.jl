@@ -57,7 +57,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   dy = prob.grid.Ly/prob.grid.ny;
   dz = prob.grid.Lz/prob.grid.nz;
   dl = minimum([dx,dy,dz]);
-  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(nν)/vi,CFL_Coef*dl^2/vi);
+  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(prob.params.nν)/vi,CFL_Coef*dl^2/vi);
 
   # Declare the iterator paramters
   t_next_save = prob.clock.t + dump_dt;
@@ -125,7 +125,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       end
 
       # Update the dashboard information to user
-      dynamical_dashboard ? Dynamic_Dashboard(prob,prog, N₀,t₀) : 
+      dynamic_dashboard ? Dynamic_Dashboard(prob,prog, N₀,t₀) : 
                             Static_Dashbroad(prob,prob.clock.step% loop_number);
     end
 

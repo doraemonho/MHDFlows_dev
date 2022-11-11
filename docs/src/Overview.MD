@@ -15,8 +15,8 @@ $\vec{B} = 0 $ in hydro regime. Using the divergence free condition to simplify 
 
 $$
 \begin{align}
-\frac{\partial \hat{v_\alpha} }{\partial t} = -i k_i (δ_{a,j} - k_\alpha k\_j k⁻²)\widehat{b_ib_j - u\_iu\_j}, \\
-\frac{\partial \hat{B_\alpha} }{\partial t} = -i δ_{a,j} k_j \widehat{b_iu_j - u\_i b\_j}.
+\frac{\partial \hat{v_\alpha} }{\partial t} = -i k_i (δ_{a,j} - k_\alpha k\_j k⁻²)(\widehat{b_ib_j} - \widehat{u\_iu\_j}), \\
+\frac{\partial \hat{B_\alpha} }{\partial t} = -i δ_{a,j} k_j (\widehat{b_iu_j} - \widehat{u\_i b\_j}).
 \end{align}
 $$
 

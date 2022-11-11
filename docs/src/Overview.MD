@@ -11,12 +11,12 @@ $$
 \end{align}
 $$
 
-$\vec{B} = 0 $ in hydro regime. Using the divergence free condition to simplify both velocity and induction equation then convert them to spectral space by doing a fourier transform, we arrive at 
+$$ \vec{B} = 0 $$ in hydro regime. Using the divergence free condition to simplify both velocity and induction equation then convert them to spectral space by doing a fourier transform, we arrive at 
 
 $$
 \begin{align}
-\frac{\partial \hat{v_\alpha} }{\partial t} = -i k_i (δ_{a,j} - k_\alpha k\_j k⁻²)(\widehat{b_ib_j} - \widehat{u\_iu\_j}), \\
-\frac{\partial \hat{B_\alpha} }{\partial t} = -i δ_{a,j} k_j (\widehat{b_iu_j} - \widehat{u\_i b\_j}).
+\frac{\partial \hat{v_\alpha} }{\partial t} = -i k_i (δ_{a,j} - k_\alpha k_j k⁻²)(\widehat{b_i b_j} - \widehat{u_i u_j}), \\
+\frac{\partial \hat{B_\alpha} }{\partial t} = -i δ_{a,j} k_j (\widehat{b_iu_j} - \widehat{u_i b_j}).
 \end{align}
 $$
 
@@ -30,4 +30,3 @@ To perform a HD/MHD simulation, the workflow of the MHDFlows.jl can break into t
 3. Time integration 
 
 Check out other section for the set up of each parts. For a full set up and workflow of a simulation, check out the jupyter notebook example. 
-

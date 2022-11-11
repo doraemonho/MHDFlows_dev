@@ -2,19 +2,23 @@
 
 MHDFlow is the Hydrodynamic/Magnetohydrodynamic solver using psudo-spectral method. In general, MHDFlows solves the following equations :
 
-```math
-\frac{\partial \vec{v} }{\partial t} + ( \vec{v} \cdot \nabla) ( \vec{v}) = -\nabla P + \vec{J} \times \vec{B} + \nu\nabla^2\vec{v},   
-\frac{\partial \vec{B} }{\partial t}  = \nabla\times(\vec{v}\times\vec{B}) + \eta\nabla^2 \vec{B},  
-\nabla \cdot \vec{B} = 0,  
+$$
+\begin{align}
+\frac{\partial \vec{v} }{\partial t} + ( \vec{v} \cdot \nabla)\vec{v} = -\nabla P + \vec{J} \times \vec{B} + \nu\nabla^2\vec{v},  \\
+\frac{\partial \vec{B} }{\partial t}  = \nabla\times(\vec{v}\times\vec{B}) + \eta\nabla^2 \vec{B},  \\
+\nabla \cdot \vec{B} = 0, \\ 
 \nabla \cdot \vec{v} = 0  
-```
+\end{align}
+$$
 
 $\vec{B} = 0 $ in hydro regime. Using the divergence free condition to simplify both velocity and induction equation then convert them to spectral space by doing a fourier transform, we arrive at 
 
 $$
+\begin{align}
 \frac{\partial \hat{v_\alpha} }{\partial t} = -i k_i (δ_{a,j} - k_\alpha k\_j k⁻²)\widehat{b_ib_j - u\_iu\_j}, \\
 \frac{\partial \hat{B_\alpha} }{\partial t} = -i δ_{a,j} k_j \widehat{b_iu_j - u\_i b\_j}.
-$$ 
+\end{align}
+$$
 
 Such equations form could be solved directly by the MHDFLows packages. Check out ``src\Solver\`` for more details.
 

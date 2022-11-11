@@ -3,10 +3,10 @@
 MHDFlow is the Hydrodynamic/Magnetohydrodynamic solver using psudo-spectral method. In general, MHDFlows solves the following equations :
 
 ```math
-\frac{\partial \vec{v} }{\partial t} + ( \vec{v} \cdot \nabla) ( \vec{v}) = -\nabla P + \vec{J} \times \vec{B} + \nu\nabla^2\vec{v}  \\  
-\frac{\partial \vec{B} }{\partial t}  = \nabla\times(\vec{v}\times\vec{B}) + \eta\nabla^2 \vec{B}  \\
-\nabla \cdot \vec{B} = 0  \\
-\nabla \cdot \vec{v} = 0  \\
+\frac{\partial \vec{v} }{\partial t} + ( \vec{v} \cdot \nabla) ( \vec{v}) = -\nabla P + \vec{J} \times \vec{B} + \nu\nabla^2\vec{v},   
+\frac{\partial \vec{B} }{\partial t}  = \nabla\times(\vec{v}\times\vec{B}) + \eta\nabla^2 \vec{B},  
+\nabla \cdot \vec{B} = 0,  
+\nabla \cdot \vec{v} = 0  
 ```
 
 $\vec{B} = 0 $ in hydro regime. Using the divergence free condition to simplify both velocity and induction equation then convert them to spectral space by doing a fourier transform, we arrive at 

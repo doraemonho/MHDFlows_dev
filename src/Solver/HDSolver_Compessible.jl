@@ -3,8 +3,8 @@ module HDSolver_compressible
 # Compessible Navier–Stokes Solver for 3D Magnetohydrodynamics Problem
 # ----------
 
-export HDcalcN_advection!
-
+export HDcalcN_advection!,
+       ρUpdate!
 using LinearAlgebra: mul!, ldiv!
 
 # Definition of physical parameter between real space and spectral sapce
@@ -19,10 +19,12 @@ function ρUpdate!(N, sol, t, clock, vars, params, grid)
   pv₂h = @view sol[:,:,:,params.uy_ind];
   pv₃h = @view sol[:,:,:,params.uz_ind];
 
+  @. ∂ρ∂t*=0;
   for (ρuᵢh,kᵢ) ∈ zip([pv₁h,pv₂h,pv₃h],[grid.kr,grid.l,grid.m])
     # Perform the Actual Advection update
-    @. ∂ρ∂t = -im*kᵢ*ρuᵢh;
+    @. ∂ρ∂t += -im*kᵢ*ρuᵢh;
   end
+
   return nothing;
 end
 

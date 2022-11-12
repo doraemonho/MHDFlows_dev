@@ -6,27 +6,15 @@ module MHDSolver_compressible
 export MHDcalcN_advection!
 
 include("MHDSolver.jl");
+include("HDSolver_Compessible.jl")
+ρUpdate! = HDSolver_compressible.ρUpdate!;
 BᵢUpdate = MHDSolver.BᵢUpdate!
+
 using LinearAlgebra: mul!, ldiv!
 
 # Definition of physical parameter between real space and spectral sapce
 # fft  - space parameters -> ρ px py pz bx by bz 
 # real - space parameters -> ρ ux uy uz bx by bz
-
-# Solving the continuity equation
-# ∂ρ∂t = -∇· (ρv) => ∑ᵢ -im*kᵢ(ρvᵢ)ₕ
-function ρUpdate!(N, sol, t, clock, vars, params, grid)
-  ∂ρ∂t = @view   N[:,:,:,params.ρ_ind];
-  pv₁h = @view sol[:,:,:,params.ux_ind];
-  pv₂h = @view sol[:,:,:,params.uy_ind];
-  pv₃h = @view sol[:,:,:,params.uz_ind];
-
-  for (ρuᵢh,kᵢ) ∈ zip([pv₁h,pv₂h,pv₃h],[grid.kr,grid.l,grid.m])
-    # Perform the Actual Advection update
-    @. ∂ρ∂t = -im*kᵢ* ρuᵢh;
-  end
-  return nothing;
-end
 
 # Solving the momentum equation
 # ∂pᵢ∂t + ∑ⱼ ∂/∂xⱼ( ρ*uᵢuⱼ + δᵢⱼP_tot - bᵢbⱼ - 2νρSᵢⱼ)) = ρFᵢ

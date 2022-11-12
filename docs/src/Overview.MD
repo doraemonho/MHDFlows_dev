@@ -17,7 +17,7 @@ Since we are solving incompressible flow, P is the freedom parameter to chose su
 
 ```math
 \frac{\partial \hat{v_\alpha} }{\partial t} = -i k_i (δ_{a,j} - k_\alpha k_j k⁻²)(\widehat{b_i b_j} - \widehat{u_i u_j}), \\
-\frac{\partial \hat{B_\alpha} }{\partial t} = -i δ_{a,j} k_j (\widehat{b_iu_j} - \widehat{u_i b_j}).
+\frac{\partial \hat{B_\alpha} }{\partial t} = -i  (1 - δ_{a,j}) k_j (\widehat{b_iu_j} - \widehat{u_i b_j}).
 ```
 
 Where ``\alpha`` refers to the `x/y/z` or `i/j/k` direction and ``\widehat{\:\:\:\:}`` donates the fourier transforam operator. Such equations could be solved directly by the MHDFLows packages. Check out `src\Solver\` for more details.

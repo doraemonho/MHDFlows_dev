@@ -172,6 +172,10 @@ function getCFL!(prob, t_diff; Coef = 0.3);
     vmax = maximum([vmax,vamax]);
   end
     
+  if prob.flag.c 
+    vmax = maximum([vmax,prob.params.cₛ]);
+  end
+
   dx = prob.grid.Lx/prob.grid.nx;
   dy = prob.grid.Ly/prob.grid.ny;
   dz = prob.grid.Lz/prob.grid.nz;

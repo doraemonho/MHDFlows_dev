@@ -33,11 +33,13 @@ function of setting up the initial condition of the problem
   Keyword arguments
 =================
 - `prob`: MHDFlows problem
+- `ρ`        : density in real space 
 - `ux/uy/uz` : velocity in real space
 - `bx/by/bz` : B-field in real space
 - `U₀x/U₀y/U₀z/B₀x/B₀y/B₀z` : VP method parameter
 """
-function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
+function SetUpProblemIC!(prob;  ρ = [],
+                               ux = [], uy = [], uz =[],
                                bx = [], by = [], bz =[],
                                U₀x= [], U₀y= [], U₀z=[],
                                B₀x= [], B₀y= [], B₀z=[])
@@ -45,13 +47,27 @@ function SetUpProblemIC!(prob; ux = [], uy = [], uz =[],
   vars = prob.vars;
   grid = prob.grid;
   params = prob.params;
+  if prob.flag.c
+    if ρ == []
+      error("User declare compressibility but no density IC was set.")
+    else
+      @views sol₀ =  sol[:, :, :, params.ρ_ind];
+      copyto!(vars.ρ, ρ);
+      mul!(sol₀ , grid.rfftplan, vars.ρ);
+    end
+  end
+
   # Copy the data to both output and solution array
   for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],
                                 [params.ux_ind,params.uy_ind,params.uz_ind])
     if uᵢ != []
       @views sol₀ =  sol[:, :, :, uᵢind];
       copyto!(prob_uᵢ,uᵢ);
-      mul!(sol₀ , grid.rfftplan, prob_uᵢ);
+      if prob.flag.c 
+        mul!(sol₀ , grid.rfftplan, @. vars.ρ*prob_uᵢ);
+      else
+        mul!(sol₀ , grid.rfftplan, prob_uᵢ);
+      end
     end
   end
   if prob.flag.b 

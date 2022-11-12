@@ -81,6 +81,8 @@ struct Flag
      b :: Bool
     "Volume Penalization"
     vp :: Bool
+    "Compressibility"
+     c :: Bool
 end
 
 """
@@ -122,7 +124,7 @@ to the time-stepper constructor.
 """
 function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::AbstractGrid{T}, 
                  vars=EmptyVars, params=EmptyParams, dev::Device=CPU(); 
-                 BFlag = false, VPFlag = false, DyeFlag = false, usr_func = [],
+                 BFlag = false, VPFlag = false, CFlag = false, DyeFlag = false, usr_func = [],
                  stepperkwargs...) where T
 
   clock = FourierFlows.Clock{T}(dt, 0, 0)
@@ -131,7 +133,7 @@ function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::Abstract
 
   sol = zeros(dev, eqn.T, eqn.dims);
 
-  flag = Flag(BFlag, VPFlag);
+  flag = Flag(BFlag, VPFlag, CFlag);
 
   dye = DyeContructer(dev, DyeFlag, grid);
 
@@ -141,17 +143,18 @@ end
 
 show(io::IO, problem::MHDFlowsProblem) =
     print(io, "MHDFlows Problem\n",
-    	        "  │    Funtions\n",
-    		      "  │     ├──────── B-field: "*CheckON(problem.flag.b),'\n',
-    		      "  ├─────├────── VP Method: "*CheckON(problem.flag.vp),'\n',
-    		      "  │     ├──────────── Dye: "*CheckDye(problem.dye),'\n',
-    		      "  │     └── user function: "*CheckFunction(problem.usr_func),'\n',
-    		      "  │                        ",'\n',
-              "  │     Features           ",'\n',  
-              "  │     ├─────────── grid: grid (on " * string(typeof(problem.grid.device)) * ")", '\n',
-              "  │     ├───── parameters: params", '\n',
-              "  │     ├────── variables: vars", '\n',
-              "  └─────├─── state vector: sol", '\n',
-              "        ├─────── equation: eqn", '\n',
-              "        ├────────── clock: clock", '\n',
-              "        └──── timestepper: ", string(nameof(typeof(problem.timestepper))))
+    	    "  │    Funtions\n",
+            "  │     ├ Compressibility: "*CheckON(problem.flag.c),'\n',
+            "  │     ├──────── B-field: "*CheckON(problem.flag.b),'\n',
+    		"  ├─────├────── VP Method: "*CheckON(problem.flag.vp),'\n',
+    		"  │     ├──────────── Dye: "*CheckDye(problem.dye),'\n',
+    		"  │     └── user function: "*CheckFunction(problem.usr_func),'\n',
+    		"  │                        ",'\n',
+            "  │     Features           ",'\n',  
+            "  │     ├─────────── grid: grid (on " * string(typeof(problem.grid.device)) * ")", '\n',
+            "  │     ├───── parameters: params", '\n',
+            "  │     ├────── variables: vars", '\n',
+            "  └─────├─── state vector: sol", '\n',
+            "        ├─────── equation: eqn", '\n',
+            "        ├────────── clock: clock", '\n',
+            "        └──── timestepper: ", string(nameof(typeof(problem.timestepper))))

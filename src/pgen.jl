@@ -7,30 +7,31 @@
 nothingfunction(args...) = nothing;
 
 """
-    function Problem(dev::Device=CPU();
-      # Numerical parameters
-                    nx = 64,
-                    ny = nx,
-                    nz = nx,
-                    Lx = 2π,
-                    Ly = Lx,
-                    Lz = Lx,
-       # Drag and/or hyper-viscosity for velocity/B-field
-                     ν = 0,
-                    nν = 1,
-                     μ = 0,
-                     η = 0,
-                    nμ = 0,
-       # Declare if turn on magnetic field/VP method/Dye Module
-        	     B_field = false,
-             VP_method = false,
-            Dye_Module = false
-      # Timestepper and equation options
-               stepper = "RK4",
-                 calcF = nothingfunction,
-      # Float type and dealiasing
-                     T = Float32,
-      aliased_fraction = 1/3)
+function Problem(dev::Device=CPU();
+  # Numerical parameters
+                nx = 64,
+                ny = nx,
+                nz = nx,
+                Lx = 2π,
+                Ly = Lx,
+                Lz = Lx,
+   # Drag and/or hyper-viscosity for velocity/B-field
+                 ν = 0,
+                nν = 1,
+                 μ = 0,
+                 η = 0,
+                nμ = 0,
+   # Declare if turn on magnetic field/VP method/Dye Module
+   Compressibility = false,
+    	     B_field = false,
+         VP_method = false,
+        Dye_Module = false
+  # Timestepper and equation options
+           stepper = "RK4",
+             calcF = nothingfunction,
+  # Float type and dealiasing
+                 T = Float32,
+  aliased_fraction = 1/3)
 
 Construct a 3D `Problem` on device `dev`.
 Keyword arguments
@@ -58,13 +59,14 @@ Keyword arguments
 """
 
 function Problem(dev::Device;
-  # Numerical parameters
+  # Numerical & physical parameters
                 nx = 64,
                 ny = nx,
                 nz = nx,
                 Lx = 2π,
                 Ly = Lx,
                 Lz = Lx,
+                cₛ = 0.0,
                 dt = 0.0,
    # Drag and/or hyper-viscosity for velocity/B-field
                  ν = 0.0,
@@ -72,6 +74,7 @@ function Problem(dev::Device;
                  η = 0.0,
                 nη = 0,
    # Declare if turn on magnetic field, VP method, Dye module
+ Compressibility = false,
     	   B_field = false,
 	     VP_method = false,
       Dye_Module = false,
@@ -86,31 +89,40 @@ function Problem(dev::Device;
         usr_params = [],
           usr_func = [])
 
+  if cₛ == 0.0 && Compressibility
+    error("You should define cₛ")
+  end
+
   # Declare the grid
   grid = ThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
 
   # Declare vars
-  vars = SetVars(dev, grid, usr_vars; B = B_field, VP =VP_method);
+  vars = SetVars(dev, grid, usr_vars; B = B_field, VP = VP_method, C = Compressibility);
 
   # Delare params
   params = SetParams(dev, grid, calcF, usr_params; 
-             B = B_field, VP = VP_method, ν = ν, η = η, nν = nν);
+             B = B_field, VP = VP_method, C= Compressibility, 
+             cₛ = cₛ, ν = ν, η = η, nν = nν);
 
   # Declare Fiuld Equations that will be iterating 
-  equation = Equation_with_forcing(dev, grid; B = B_field);
+  equation = Equation_with_forcing(dev, grid; B = B_field, C = Compressibility);
 
   # Return the Problem
   return MHDFLowsProblem(equation, stepper, dt, grid, vars, params, dev;
-          BFlag = B_field, VPFlag = VP_method, DyeFlag = Dye_Module, usr_func = usr_func)
+          CFlag = Compressibility, BFlag = B_field, VPFlag = VP_method, DyeFlag = Dye_Module, usr_func = usr_func)
 
 end
 
-function Equation_with_forcing(dev, grid::AbstractGrid; B = false)
+function Equation_with_forcing(dev, grid::AbstractGrid; B = false, C = false)
   T = eltype(grid);
-  Nₗ = ifelse(B,6,3)
+  if C
+    Nₗ = ifelse(B,7,4)
+    calcN! = B ? CMHDcalcN! : CHDcalcN!;
+  else
+    Nₗ = ifelse(B,6,3)
+    calcN! = B ? MHDcalcN! : HDcalcN!;
+  end
   L = zeros(dev, T, (grid.nkr, grid.nl, grid.nm, Nₗ));
-
-  calcN! = B ? MHDcalcN! : HDcalcN!;
   
   return FourierFlows.Equation(L,calcN!, grid);
 end
@@ -136,6 +148,29 @@ function HDcalcN!(N, sol, t, clock, vars, params, grid)
   
   return nothing
 end
+
+
+function CMHDcalcN!(N, sol, t, clock, vars, params, grid)
+  
+  dealias!(sol, grid)
+  
+  MHDSolver_compressible.MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+  
+  addforcing!(N, sol, t, clock, vars, params, grid)
+  
+  return nothing
+end
+
+function CHDcalcN!(N, sol, t, clock, vars, params, grid)
+  dealias!(sol, grid)
+  
+  HDSolver_compressible.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+  
+  addforcing!(N, sol, t, clock, vars, params, grid)
+  
+  return nothing
+end
+
 
 function addforcing!(N, sol, t, clock, vars, params, grid)
   params.calcF!(N, sol, t, clock, vars, params, grid) 

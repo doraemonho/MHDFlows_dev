@@ -82,7 +82,7 @@ struct Flag
     "Volume Penalization"
     vp :: Bool
     "Compressibility"
-     C :: Bool
+     c :: Bool
 end
 
 """
@@ -144,7 +144,7 @@ end
 show(io::IO, problem::MHDFlowsProblem) =
     print(io, "MHDFlows Problem\n",
     	    "  │    Funtions\n",
-            "  │     ├ Compressibility: "*CheckON(problem.flag.C),'\n',
+            "  │     ├ Compressibility: "*CheckON(problem.flag.c),'\n',
             "  │     ├──────── B-field: "*CheckON(problem.flag.b),'\n',
     		"  ├─────├────── VP Method: "*CheckON(problem.flag.vp),'\n',
     		"  │     ├──────────── Dye: "*CheckDye(problem.dye),'\n',

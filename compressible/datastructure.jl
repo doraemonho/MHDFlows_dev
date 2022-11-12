@@ -296,31 +296,31 @@ end
 function SetHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz nonlin1
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz nonlin1 
   @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) nonlinh1
   
   return HVars( ux,  uy,  uz, 
-              nonlin1, nonlinh1, usr_vars);
+                nonlin1, nonlinh1, usr_vars);
 end
 
 function SetCMHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz nonlin1 nonlinh2
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ρ ux  uy  uz  bx  by bz nonlin1 nonlinh2
   @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm)  uxh uyh uzh nonlinh1 nonlinh2
   
-  return MVars( ux,  uy,  uz,  bx,  by,  bz, uxh, uyh, uzh,
+  return CMVars( ρ, ux,  uy,  uz,  bx,  by,  bz, uxh, uyh, uzh,
                 nonlin1, nonlinh1, nonlin2, nonlinh2, usr_vars);
 end
 
 function SetCHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux uy  uz nonlin1 nonlin2
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ρ ux uy  uz nonlin1 nonlin2
   @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) uxh uyh uzh nonlinh1 nonlinh2
   
-  return HVars( ux,  uy,  uz, uxh, uyh, uzh, 
-              nonlin1, nonlinh1, nonlin2, nonlinh2, usr_vars);
+  return CHVars( ρ, ux,  uy,  uz, uxh, uyh, uzh, 
+                 nonlin1, nonlinh1, nonlin2, nonlinh2, usr_vars);
 end
 
 # Functions of setting up the Vars and Params struct

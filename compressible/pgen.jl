@@ -22,6 +22,7 @@ function Problem(dev::Device=CPU();
                  η = 0,
                 nμ = 0,
    # Declare if turn on magnetic field/VP method/Dye Module
+   Compressibility = false,
     	     B_field = false,
          VP_method = false,
         Dye_Module = false
@@ -88,6 +89,10 @@ function Problem(dev::Device;
         usr_params = [],
           usr_func = [])
 
+  if cₛ == 0.0 && Compressibility
+    error("You should define cₛ")
+  end
+
   # Declare the grid
   grid = ThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
 
@@ -104,7 +109,7 @@ function Problem(dev::Device;
 
   # Return the Problem
   return MHDFLowsProblem(equation, stepper, dt, grid, vars, params, dev;
-          BFlag = B_field, VPFlag = VP_method, DyeFlag = Dye_Module, usr_func = usr_func)
+          CFlag = Compressibility, BFlag = B_field, VPFlag = VP_method, DyeFlag = Dye_Module, usr_func = usr_func)
 
 end
 

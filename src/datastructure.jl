@@ -46,6 +46,79 @@ struct HVars{Aphys, Atrans, usr_var} <: MHDVars
     usr_vars :: usr_var
 end
 
+struct CHVars{Aphys, Atrans, usr_var} <: MHDVars
+  "density "
+    ρ  :: Aphys
+  "x-component of velocity"
+    ux :: Aphys
+  "y-component of velocity"
+    uy :: Aphys
+  "z-component of velocity"
+    uz :: Aphys
+
+  "x-component of fourier velocity"
+   uxh :: Atrans
+  "y-component of fourier velocity"
+   uyh :: Atrans
+  "z-component of fourier velocity"
+   uzh :: Atrans
+
+  # Temperatory Cache 
+  "Non-linear term 1"
+   nonlin1 :: Aphys
+  "Fourier transform of Non-linear term"
+   nonlinh1 :: Atrans
+
+  "Non-linear term 2"
+   nonlin2 :: Aphys
+  "Fourier transform of Non-linear term"
+   nonlinh2 :: Atrans
+
+  # User Defined Vars
+  "User Defined Vars"
+    usr_vars :: usr_var
+end
+
+struct CMVars{Aphys, Atrans, usr_var} <: MHDVars
+    "density "
+        ρ  :: Aphys
+    "x-component of velocity"
+        ux :: Aphys
+    "y-component of velocity"
+        uy :: Aphys
+    "z-component of velocity"
+        uz :: Aphys
+    "x-component of B-field"
+        bx :: Aphys
+    "y-component of B-field"
+        by :: Aphys
+    "z-component of B-field"
+        bz :: Aphys
+
+    "x-component of fourier velocity"
+       uxh :: Atrans
+    "y-component of fourier velocity"
+       uyh :: Atrans
+    "z-component of fourier velocity"
+       uzh :: Atrans
+
+    # Temperatory Cache 
+    "Non-linear term 1"
+      nonlin1 :: Aphys
+    "Fourier transform of Non-linear term"
+     nonlinh1 :: Atrans
+
+    "Non-linear term 2"
+     nonlin2 :: Aphys
+    "Fourier transform of Non-linear term"
+     nonlinh2 :: Atrans
+
+    # User Defined Vars
+    "User Defined Vars"
+    usr_vars :: usr_var
+end
+
+
 struct MHDParams_VP{Aphys,usr_param} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
@@ -129,6 +202,7 @@ struct HDParams{usr_param} <: AbstractParams
  usr_params :: usr_param
 end
 
+
 struct MHDParams{usr_param} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
@@ -141,6 +215,57 @@ struct MHDParams{usr_param} <: AbstractParams
     nη :: Int
     
   "Array Indexing for velocity"
+    ux_ind :: Int
+    uy_ind :: Int
+    uz_ind :: Int
+    
+  "Array Indexing for B-field"
+    bx_ind :: Int
+    by_ind :: Int
+    bz_ind :: Int
+  "function that calculates the Fourier transform of the forcing, ``F̂``"
+    calcF! :: Function 
+  
+  "User defined params"
+ usr_params :: usr_param
+
+end
+
+struct CHDParams{usr_param} <: AbstractParams
+  "speed of sound"
+        cₛ :: Number
+  "small-scale (hyper)-viscosity coefficient for v"
+        ν :: Number
+  "(hyper)-viscosity order, `nν```≥ 1``"
+       nν :: Int
+
+  "Array Indexing for density/velocity"
+    ρ_ind :: Int
+   ux_ind :: Int
+   uy_ind :: Int
+   uz_ind :: Int
+
+  "function that calculates the Fourier transform of the forcing, ``F̂``"
+   calcF! :: Function
+
+  "User defined params"
+ usr_params :: usr_param
+end
+
+struct CMHDParams{usr_param} <: AbstractParams
+  "speed of sound"
+        cₛ :: Number
+  "small-scale (hyper)-viscosity coefficient for v"
+        ν :: Number
+  "small-scale (hyper)-viscosity coefficient for b"
+        η :: Number
+  "(hyper)-viscosity order, `nν```≥ 1``"
+        nν :: Int
+  "(hyper)-resisivity order, `nη```≥ 1``"
+        nη :: Int
+    
+  "Array Indexing for density/velocity"
+     ρ_ind :: Int
     ux_ind :: Int
     uy_ind :: Int
     uz_ind :: Int
@@ -171,28 +296,53 @@ end
 function SetHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz nonlin1
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz nonlin1 
   @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) nonlinh1
   
   return HVars( ux,  uy,  uz, 
-              nonlin1, nonlinh1, usr_vars);
+                nonlin1, nonlinh1, usr_vars);
 end
 
+function SetCMHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
+  T = eltype(grid)
+    
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ρ ux  uy  uz  bx  by bz nonlin1 nonlinh2
+  @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm)  uxh uyh uzh nonlinh1 nonlinh2
+  
+  return CMVars( ρ, ux,  uy,  uz,  bx,  by,  bz, uxh, uyh, uzh,
+                nonlin1, nonlinh1, nonlin2, nonlinh2, usr_vars);
+end
+
+function SetCHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
+  T = eltype(grid)
+    
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ρ ux uy  uz nonlin1 nonlin2
+  @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) uxh uyh uzh nonlinh1 nonlinh2
+  
+  return CHVars( ρ, ux,  uy,  uz, uxh, uyh, uzh, 
+                 nonlin1, nonlinh1, nonlin2, nonlinh2, usr_vars);
+end
 
 # Functions of setting up the Vars and Params struct
-function SetVars(dev, grid, usr_vars; B = false, VP = false)
-  setvars = ifelse(B,SetMHDVars,SetHDVars);
+function SetVars(dev, grid, usr_vars; B = false, VP = false, C =false)
+  if C 
+    setvars = ifelse(B,SetCMHDVars,SetCHDVars);
+  else
+    setvars = ifelse(B,SetMHDVars,SetHDVars);
+  end
   return setvars(dev, grid, usr_vars);
 end
 
  function SetParams(::Dev, grid::AbstractGrid, calcF::Function, usr_params;
-                     B = false, VP = false, ν = 0, η = 0, nν = 0, nη = 0) where Dev
+                     B = false, VP = false, C = false, cₛ = 0, ν = 0, η = 0, nν = 0, nη = 0) where Dev
   T = eltype(grid);
   usr_param = typeof(usr_params);
   if (B)
     if (VP)
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z B₀x B₀y B₀z
       params = MHDParams_VP(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, χ, U₀x, U₀y, U₀z, B₀x, B₀y, B₀z, usr_params)
+    elseif (C)
+      params = CMHDParams(cₛ,ν, η, nν, nη, 1, 2, 3, 4, 5, 6, 7, calcF, usr_params);
     else
       params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params);
     end
@@ -200,6 +350,8 @@ end
     if (VP)
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z
       params = HDParams_VP(ν, nν, 1, 2, 3, calcF, χ, U₀x, U₀y, U₀z, usr_params);
+    elseif (C)
+      params = CHDParams(cₛ, ν, nν, 1, 2, 3, 4, calcF, usr_params);
     else
       params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params);
     end

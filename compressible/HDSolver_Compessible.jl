@@ -3,8 +3,7 @@ module HDSolver_compressible
 # Compessible Navier–Stokes Solver for 3D Magnetohydrodynamics Problem
 # ----------
 
-export UᵢUpdate!,
-       ρUpdate!
+export HDcalcN_advection!
 
 using LinearAlgebra: mul!, ldiv!
 
@@ -15,17 +14,15 @@ using LinearAlgebra: mul!, ldiv!
 # Solving the continuity equation
 # ∂ρ∂t = -∇· (ρv) => ∑_i -im*kᵢ(ρvᵢ)ₕ
 function ρUpdate!(N, sol, t, clock, vars, params, grid)
-
   ∂ρ∂t = @view   N[:,:,:,params.ρ_ind];
-     ρ = @view sol[:,:,:,params.ρ_ind];
+  pv₁h = @view sol[:,:,:,params.ux_ind];
+  pv₁h = @view sol[:,:,:,params.uy_ind];
+  pv₁h = @view sol[:,:,:,params.uz_ind];
 
   # define the sketch array
   ρvᵢ  = vars.nonlin1;
-  ρvᵢh = vars.nonlin1h;
-  for (uᵢ,kᵢ) ∈ zip([vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
-      # Perform Computation in Real space
-      @. ρvᵢ = ρ*uᵢ;
-      mul!(ρvᵢh, grid.rfftplan, ρvᵢ);
+  ρvᵢh = vars.nonlinh1;
+  for (ρuᵢh,kᵢ) ∈ zip([pv₁h,pv₁h,pv₁h],[grid.kr,grid.l,grid.m])
       # Perform the Actual Advection update
       @. ∂ρ∂t = -im*kᵢ* ρvᵢh;
   end
@@ -61,6 +58,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction = "x")
   end
 
   @. ∂pᵢh∂t*=0;
+  ρ = vars.ρ;
   #momentum and magnetic field part
   ρuᵢuⱼ  = vars.nonlin1;  
   ρuᵢuⱼh = vars.nonlinh1;
@@ -83,21 +81,22 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction = "x")
   Sᵢⱼ ,ρSᵢⱼ  = vars.nonlin1 ,vars.nonlin2;  
   Sᵢⱼh,ρSᵢⱼh = vars.nonlinh1,vars.nonlinh2;
   for (uⱼh,kⱼ,j) ∈ zip([vars.uxh,vars.uyh,vars.uzh],[grid.kr,grid.l,grid.m],[1,2,3])
-    if i == j
+    if a == j
       @. Sᵢⱼh = kᵢ*uᵢh - (k₁*u₁h + k₂*u₂h + k₃*u₃h)*0.3333333333;
     else
       @. Sᵢⱼh = 0.5*(kᵢ*uⱼh + kⱼ*uᵢh);
     end
     ldiv!(Sᵢⱼ, grid.rfftplan, Sᵢⱼh);
     @. ρSᵢⱼ = ρ*Sᵢⱼ;
-    mul!(ρS_ijh, grid.rfftplan, ρSᵢⱼ);
+    mul!(ρSᵢⱼh, grid.rfftplan, ρSᵢⱼ);
     @. ∂pᵢh∂t -= kⱼ*2*ν*ρSᵢⱼh;
   end
 
   return nothing;
 end
 
-function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+
+function HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update ρ + P + V + B Real Conponment
   ldiv!(vars.ρ , grid.rfftplan, deepcopy(@view sol[:, :, :, params.ρ_ind ]));
@@ -111,9 +110,9 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   @. vars.uz/=vars.ρ;
 
   #Copy the spectral conponment to sketch array
-  mul!(var.uxh, grid.rfftplan, var.ux);
-  mul!(var.uyh, grid.rfftplan, var.uy);
-  mul!(var.uzh, grid.rfftplan, var.uz);
+  mul!(vars.uxh, grid.rfftplan, vars.ux);
+  mul!(vars.uyh, grid.rfftplan, vars.uy);
+  mul!(vars.uzh, grid.rfftplan, vars.uz);
   
   #Update continuity equation
   ρUpdate!(N, sol, t, clock, vars, params, grid);

@@ -40,6 +40,6 @@ end
 
 function Move_Data_to_Prob!(data,real,sol,grid)
   copyto!(real, deepcopy(data));
-  mul!(sol, prob.grid.rfftplan, real);   
+  mul!(sol, grid.rfftplan, real);   
   return nothing
 end

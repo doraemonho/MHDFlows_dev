@@ -199,9 +199,9 @@ function Restart!(prob,file_path_and_name)
   uz = read(f,"k_velocity");
   
   #Update V Conponment
-  Move_Data_to_Prob!(ux, prob.vars.ux, view(prob.sol,:, :, :, prob.params.ux_ind),grid)
-  Move_Data_to_Prob!(uy, prob.vars.uy, view(prob.sol,:, :, :, prob.params.uy_ind),grid)
-  Move_Data_to_Prob!(uz, prob.vars.uz, view(prob.sol,:, :, :, prob.params.uz_ind),grid)
+  Move_Data_to_Prob!(ux, prob.vars.ux, view(prob.sol,:, :, :, prob.params.ux_ind),prob.grid)
+  Move_Data_to_Prob!(uy, prob.vars.uy, view(prob.sol,:, :, :, prob.params.uy_ind),prob.grid)
+  Move_Data_to_Prob!(uz, prob.vars.uz, view(prob.sol,:, :, :, prob.params.uz_ind),prob.grid)
 
   #Update B Conponment
   if prob.flag.b == true
@@ -209,15 +209,15 @@ function Restart!(prob,file_path_and_name)
     by = read(f,"j_mag_field",);
     bz = read(f,"k_mag_field",);
 
-    Move_Data_to_Prob!(bx,prob.vars.bx, view(prob.sol,:, :, :, prob.params.bx_ind),grid)
-    Move_Data_to_Prob!(by,prob.vars.by, view(prob.sol,:, :, :, prob.params.by_ind),grid)
-    Move_Data_to_Prob!(bz,prob.vars.bz, view(prob.sol,:, :, :, prob.params.bz_ind),grid)
+    Move_Data_to_Prob!(bx,prob.vars.bx, view(prob.sol,:, :, :, prob.params.bx_ind),prob.grid)
+    Move_Data_to_Prob!(by,prob.vars.by, view(prob.sol,:, :, :, prob.params.by_ind),prob.grid)
+    Move_Data_to_Prob!(bz,prob.vars.bz, view(prob.sol,:, :, :, prob.params.bz_ind),prob.grid)
   end
 
   #Update the density
   if (prob.flag.c == true)
     ρ = read(f,"gas_density",);
-    Move_Data_to_Prob!(ρ, prob.vars.ρ, view(prob.sol,:, :, :, prob.params.ρ_ind),grid)
+    Move_Data_to_Prob!(ρ, prob.vars.ρ, view(prob.sol,:, :, :, prob.params.ρ_ind),prob.grid)
   end
 
   #if prob.flag.vp == true

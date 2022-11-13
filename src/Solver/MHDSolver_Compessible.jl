@@ -8,7 +8,7 @@ export MHDcalcN_advection!
 include("MHDSolver.jl");
 include("HDSolver_Compessible.jl")
 ρUpdate! = HDSolver_compressible.ρUpdate!;
-BᵢUpdate = MHDSolver.BᵢUpdate!
+BᵢUpdate! = MHDSolver.BᵢUpdate!;
 
 using LinearAlgebra: mul!, ldiv!
 
@@ -71,16 +71,17 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction = "x")
   Sᵢⱼ ,ρSᵢⱼ  = vars.nonlin1 ,vars.nonlin2;  
   Sᵢⱼh,ρSᵢⱼh = vars.nonlinh1,vars.nonlinh2;
   for (uⱼh,kⱼ,j) ∈ zip([vars.uxh,vars.uyh,vars.uzh],[grid.kr,grid.l,grid.m],[1,2,3])
-    if i == j
-      @. Sᵢⱼh = kᵢ*uᵢh - (k₁*u₁h + k₂*u₂h + k₃*u₃h)*0.3333333333;
+    if a == j
+      @. Sᵢⱼh += im*(kᵢ*uᵢh - (k₁*u₁h + k₂*u₂h + k₃*u₃h)*0.3333333333);
     else
-      @. Sᵢⱼh = 0.5*(kᵢ*uⱼh + kⱼ*uᵢh);
+      @. Sᵢⱼh += 0.5*im*(kᵢ*uⱼh + kⱼ*uᵢh);
     end
     ldiv!(Sᵢⱼ, grid.rfftplan, Sᵢⱼh);
     @. ρSᵢⱼ = ρ*Sᵢⱼ;
     mul!(ρSᵢⱼh, grid.rfftplan, ρSᵢⱼ);
-    @. ∂pᵢh∂t -= kⱼ*2*ν*ρSᵢⱼh;
+    @. ∂pᵢh∂t += im*kⱼ*2*ν*ρSᵢⱼh;
   end
+
   return nothing;
 end
 

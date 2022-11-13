@@ -15,13 +15,17 @@ mutable struct A99_vars{Atrans,T}
   eⁱᶿ :: Atrans
 end
 
-function GetA99vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32) where Dev
+function GetA99vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32, C =false) where Dev
 
   A = convert(T,1.0);
   b = convert(T,1.0);
   @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) Fk e1x e1y e2x e2y e2z gi eⁱᶿ
     
-  return  A99_vars(A,b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;  
+  if C
+    return  A99_vars(A,b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving_Compressible!
+  else
+    return  A99_vars(A,b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;  
+  end
 end
 
 function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
@@ -44,12 +48,43 @@ function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
   @. N[:,:,:,params.ux_ind] += A*Fk*eⁱᶿ*gi*e1x;
   @. N[:,:,:,params.uy_ind] += A*Fk*eⁱᶿ*gi*e1y;
     
-  # Work out the seond conponement
+  # Work out the second conponement
   eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
   @. gi  = √(1 - gi.^2); 
   @. N[:,:,:,params.ux_ind] += A*Fk*eⁱᶿ*gi*e2x;
   @. N[:,:,:,params.uy_ind] += A*Fk*eⁱᶿ*gi*e2y;
   @. N[:,:,:,params.uz_ind] += A*Fk*eⁱᶿ*gi*e2z;
+
+  return nothing
+end
+
+function A99ForceDriving_Compressible!(N, sol, t, clock, vars, params, grid)
+
+  # A99 Force with the support of compressibiltiy
+  randN = typeof(N) <: Array ? Base.rand : CUDA.rand;
+  T  = eltype(grid);
+  A  = vars.usr_vars.A::T;
+  b  = vars.usr_vars.b::T;
+  Fk = vars.usr_vars.Fk; 
+  e1x, e1y = vars.usr_vars.e1x,vars.usr_vars.e1y;
+  e2x, e2y, e2z = vars.usr_vars.e2x,vars.usr_vars.e2y,vars.usr_vars.e2z;
+  eⁱᶿ, gi =  vars.usr_vars.eⁱᶿ, vars.usr_vars.gi;
+  Φ  = vars.nonlinh1;
+    
+  # Work out the first conponement
+  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  Φ   .= randN(Complex{T},grid.nkr,grid.nl,grid.nm).*π;
+  @. gi  = -tanh(b*(Φ - π/2))/tanh(b*π/2);
+  
+  aᵢtoFᵢ!(view(N,:,:,:,params.ux_ind),A.*Fk.*eⁱᶿ.*gi.*e1x,vars,grid);
+  aᵢtoFᵢ!(view(N,:,:,:,params.uy_ind),A.*Fk.*eⁱᶿ.*gi.*e1y,vars,grid);
+    
+  # Work out the second conponement
+  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  @. gi  = √(1 - gi.^2); 
+  aᵢtoFᵢ!(view(N,:,:,:,params.ux_ind),A.*Fk.*eⁱᶿ.*gi.*e2x,vars,grid);
+  aᵢtoFᵢ!(view(N,:,:,:,params.uy_ind),A.*Fk.*eⁱᶿ.*gi.*e2y,vars,grid);
+  aᵢtoFᵢ!(view(N,:,:,:,params.uz_ind),A.*Fk.*eⁱᶿ.*gi.*e2z,vars,grid);
 
   return nothing
 end
@@ -85,4 +120,13 @@ function SetUpFk(prob; kf = 2, P = 1,σ²= 1)
   copyto!(prob.vars.usr_vars.e2y,e2y);
   copyto!(prob.vars.usr_vars.e2z,e2z); 
     
+end
+
+function aᵢtoFᵢ!(∂pᵢ∂t,aᵢh,vars,grid)
+  ρ  = vars.ρ;
+  ldiv!(vars.nonlin1,grid.rfftplan,aᵢh);
+  @. vars.nonlin1*=ρ;
+  mul!(vars.nonlinh1,grid.rfftplan,vars.nonlin1);
+  @. ∂pᵢ∂t += vars.nonlinh1;
+  return nothing
 end

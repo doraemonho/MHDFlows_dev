@@ -260,6 +260,10 @@ function savefile(prob,file_number;file_path_and_name="")
       write(fw, "k_mag_field", Array(prob.vars.bz));
   end
 
+  if (prob.flag.c == true)
+    write(fw, "gas_density", Array(prob.vars.ρ));
+  end
+
   #if (prob.flag.vp == true)
   #    write(fw, "chi", Array(prob.params.χ));
   #end

@@ -199,15 +199,9 @@ function Restart!(prob,file_path_and_name)
   uz = read(f,"k_velocity");
   
   #Update V Conponment
-  copyto!(prob.vars.ux, deepcopy(ux));
-  copyto!(prob.vars.uy, deepcopy(uy));
-  copyto!(prob.vars.uz, deepcopy(uz));
-  uxh = @view prob.sol[:, :, :, prob.params.ux_ind];
-  uyh = @view prob.sol[:, :, :, prob.params.uy_ind];
-  uzh = @view prob.sol[:, :, :, prob.params.uz_ind];
-  mul!(uxh, prob.grid.rfftplan, prob.vars.ux);   
-  mul!(uyh, prob.grid.rfftplan, prob.vars.uy);
-  mul!(uzh, prob.grid.rfftplan, prob.vars.uz);
+  Move_Data_to_Prob!(ux, prob.vars.ux, view(prob.sol,:, :, :, prob.params.ux_ind),grid)
+  Move_Data_to_Prob!(uy, prob.vars.uy, view(prob.sol,:, :, :, prob.params.uy_ind),grid)
+  Move_Data_to_Prob!(uz, prob.vars.uz, view(prob.sol,:, :, :, prob.params.uz_ind),grid)
 
   #Update B Conponment
   if prob.flag.b == true
@@ -215,15 +209,15 @@ function Restart!(prob,file_path_and_name)
     by = read(f,"j_mag_field",);
     bz = read(f,"k_mag_field",);
 
-    copyto!(prob.vars.bx, deepcopy(bx));
-    copyto!(prob.vars.by, deepcopy(by));
-    copyto!(prob.vars.bz, deepcopy(bz));
-    bxh = @view prob.sol[:, :, :, prob.params.bx_ind];
-    byh = @view prob.sol[:, :, :, prob.params.by_ind];
-    bzh = @view prob.sol[:, :, :, prob.params.bz_ind];
-    mul!(bxh, prob.grid.rfftplan, prob.vars.bx);   
-    mul!(byh, prob.grid.rfftplan, prob.vars.by);
-    mul!(bzh, prob.grid.rfftplan, prob.vars.bz);
+    Move_Data_to_Prob!(bx,prob.vars.bx, view(prob.sol,:, :, :, prob.params.bx_ind),grid)
+    Move_Data_to_Prob!(by,prob.vars.by, view(prob.sol,:, :, :, prob.params.by_ind),grid)
+    Move_Data_to_Prob!(bz,prob.vars.bz, view(prob.sol,:, :, :, prob.params.bz_ind),grid)
+  end
+
+  #Update the density
+  if (prob.flag.c == true)
+    ρ = read(f,"gas_density",);
+    Move_Data_to_Prob!(ρ, prob.vars.ρ, view(prob.sol,:, :, :, prob.params.ρ_ind),grid)
   end
 
   #if prob.flag.vp == true

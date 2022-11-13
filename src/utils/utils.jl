@@ -37,3 +37,9 @@ function GetSimpleThreeDGrid(nx = 64, Lx = 2π, ny = nx, Ly = Lx, nz = nx, Lz = 
   
   return SimpleGrid(k,l,m,kr,Ksq, invKsq, Krsq, invKrsq, rfftplan);
 end
+
+function Move_Data_to_Prob!(data,real,sol,grid)
+  copyto!(real, deepcopy(data));
+  mul!(sol, prob.grid.rfftplan, real);   
+  return nothing
+end

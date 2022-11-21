@@ -21,14 +21,23 @@ abstract type MHDVars <: AbstractVars end
 include("DyeModule.jl")
 include("Problems.jl")
 include("pgen.jl")
-include("Solver/VPSolver.jl")
-include("Solver/HDSolver.jl")
-include("Solver/MHDSolver.jl")
-include("Solver/HDSolver_Compessible.jl")
-include("Solver/MHDSolver_Compessible.jl")
+# Data Structure
+include("Structure/datastructure.jl")
+include("Structure/HDParams.jl")
+include("Structure/HDVars.jl")
+include("Structure/MHDParams.jl")
+include("Structure/MHDVars.jl")
+# Solver
+include("Solver/VPSolver.jl");
+include("Solver/HDSolver.jl");
+include("Solver/MHDSolver.jl");
+include("Solver/ShearingBox.jl");
+include("Solver/HDSolver_Compessible.jl");
+include("Solver/MHDSolver_Compessible.jl");
+# integrator related
 include("DiagnosticWrapper.jl")
 include("integrator.jl")
-include("datastructure.jl")
+#utils
 include("utils/utils.jl");
 include("utils/VectorCalculus.jl")
 include("utils/MHDAnalysis.jl")

@@ -74,8 +74,9 @@ function Problem(dev::Device;
                  η = 0.0,
                 nη = 0,
    # Declare if turn on magnetic field, VP method, Dye module
+         B_field = false,
  Compressibility = false,
-    	   B_field = false,
+           Shear = false,
 	     VP_method = false,
       Dye_Module = false,
   # Timestepper and equation options
@@ -89,6 +90,7 @@ function Problem(dev::Device;
         usr_params = [],
           usr_func = [])
 
+  # Compatibility Checking
   if cₛ == 0.0 && Compressibility
     error("You should define cₛ")
   end
@@ -101,30 +103,34 @@ function Problem(dev::Device;
 
   # Delare params
   params = SetParams(dev, grid, calcF, usr_params; 
-             B = B_field, VP = VP_method, C= Compressibility, 
+             B = B_field, VP = VP_method, C= Compressibility, S=Shear,
              cₛ = cₛ, ν = ν, η = η, nν = nν);
 
   # Declare Fiuld Equations that will be iterating 
-  equation = Equation_with_forcing(dev, grid; B = B_field, C = Compressibility);
+  equation = Equation_with_forcing(dev, grid; B = B_field, C = Compressibility, S=Shear);
 
   # Return the Problem
   return MHDFLowsProblem(equation, stepper, dt, grid, vars, params, dev;
-          CFlag = Compressibility, BFlag = B_field, VPFlag = VP_method, DyeFlag = Dye_Module, usr_func = usr_func)
+          CFlag = Compressibility, BFlag = B_field, SFlag = Shear, VPFlag = VP_method, DyeFlag = Dye_Module, 
+          usr_func = usr_func)
 
 end
 
-function Equation_with_forcing(dev, grid::AbstractGrid; B = false, C = false)
-  T = eltype(grid);
-  if C
-    Nₗ = ifelse(B,7,4)
-    calcN! = B ? CMHDcalcN! : CHDcalcN!;
+function Equation_with_forcing(dev, grid::AbstractGrid; B = false, C = false, S=false)
+  if C 
+    Nₗ = ifelse(B,7,4);
   else
-    Nₗ = ifelse(B,6,3)
+    Nₗ = ifelse(B,6,3);
+  end
+  if C
+    calcN! = B ? CMHDcalcN! : CHDcalcN!;
+  elseif S
+    calcN! = B ? SMHDcalcN! : SHDcalcN!;
+  else
     calcN! = B ? MHDcalcN! : HDcalcN!;
   end
-  L = zeros(dev, T, (grid.nkr, grid.nl, grid.nm, Nₗ));
   
-  return FourierFlows.Equation(L,calcN!, grid);
+  return Setup_Equation(calcN!, grid; Nl =Nₗ);
 end
 
 
@@ -149,6 +155,27 @@ function HDcalcN!(N, sol, t, clock, vars, params, grid)
   return nothing
 end
 
+function SMHDcalcN!(N, sol, t, clock, vars, params, grid)
+  
+  Shear.Shearing_dealias!(sol, grid);
+  
+  Shear.MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
+  
+  addforcing!(N, sol, t, clock, vars, params, grid)
+  
+  return nothing
+end
+
+function SHDcalcN!(N, sol, t, clock, vars, params, grid)
+  
+  Shear.Shearing_dealias!(sol, grid);
+  
+  Shear.HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
+  
+  addforcing!(N, sol, t, clock, vars, params, grid)
+  
+  return nothing
+end
 
 function CMHDcalcN!(N, sol, t, clock, vars, params, grid)
   

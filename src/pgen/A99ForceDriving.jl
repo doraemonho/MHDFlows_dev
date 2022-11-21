@@ -90,17 +90,20 @@ function A99ForceDriving_Compressible!(N, sol, t, clock, vars, params, grid)
 end
 
 function SetUpFk(prob; kf = 2, P = 1,σ²= 1)
+  AT   = Array;
   grid = prob.grid;
-  kx,ky,kz = grid.kr,grid.l,grid.m;
+  kx,ky,kz  = AT(grid.kr),AT(grid.l),AT(grid.m);
   Lx,Ly,Lz  = grid.Lx,grid.Ly,grid.Lz;
   dx,dy,dz  = grid.dx,grid.dy,grid.dz;
-  k⁻¹  = @. √(grid.invKrsq);
-  k    = @. √(grid.Krsq);
+  k⁻¹  =  sqrt.(AT(grid.invKrsq));
+  k    =  sqrt.(AT(grid.Krsq));
   k⊥   = @. √(kx^2 + ky^2);
   dk⁻² = @. 1/(k+1)^2;
   ∫Fkdk  = sum(@. exp(-(k.-kf)^2/σ²)*dk⁻²)
   A   = sqrt(P*3*(Lx/dx)*(Ly/dy)*(Lz/dz)/∫Fkdk*(1/dx/dy/dz));
   Fk  = @. A*√(exp(-(k.-kf)^2/σ²)/2/π)*k⁻¹;
+  # Reason : https://github.com/FourierFlows/FourierFlows.jl/issues/326
+  @. Fk[1,:,:] .= 0;
     
   e1x = @.  ky/k⊥;
   e1y = @. -kx/k⊥;

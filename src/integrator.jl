@@ -124,7 +124,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       prob.dye.dyeflag == true ? prob.dye.stepforward!(prob) : nothing;
 
       #Shear Update
-      prob.flag.s == true ? Shear.ShearingReMapping!(prob) : nothing;      
+      prob.flag.s == true ? Shear.Shearing_remapping!(prob) : nothing;      
 
       #User defined function
       for foo! ∈ prob.usr_func

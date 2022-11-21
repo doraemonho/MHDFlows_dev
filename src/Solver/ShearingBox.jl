@@ -4,7 +4,8 @@ module Shear
 # ----------
 
 export 
-  ShearingReMapping!,
+  Shearing_coordinate_update!,
+  Shearing_remapping!,
   HD_ShearingAdvection!,
   MHD_ShearingAdvection!,
   Shearing_dealias!
@@ -21,23 +22,47 @@ HDUᵢUpdate! = MHDSolver.UᵢUpdate!;
 MHDUᵢUpdate! = MHDSolver.UᵢUpdate!;
 BᵢUpdate! = MHDSolver.BᵢUpdate!;
 
-function ShearingReMapping!(prob)
-  ShearingReMapping!(prob.sol, prob.clock, prob.vars, prob.params);
+function Shearing_remapping!(prob)
+  Shearing_remapping!(prob.sol, prob.clock, prob.vars, prob.params);
   return nothing
 end
 
-function ShearingReMapping!(sol, clock, vars, params)
+function Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
     q  = params.usr_params.q;
     Ω  = params.usr_params.Ω;
+    τΩ = params.usr_params.tΩ;
     Lx,Ly = grid.Lx,grid.Ly;
-    τΩ = Lx/Ly/q/Ω;
+    
+    #Shear time intreval in sub-time-step
+    dτ = clock.t - t;
+    
+    kx,ky,kz = grid.kr,grid.l,grid.m;
+    k²,k⁻²   = grid.Krsq,grid.invKrsq;
+    ky₀      = params.usr_params.ky₀;
+    τ        = params.usr_params.τ;
+    
+    # Construct the new shear coordinate
+    @. ky  = ky₀ + q*Ω*(τ+dτ)*kx;
+    @. k²  = kx^2 + ky^2 + kz^2;
+    @. k⁻² = 1/k²;
+    @views @. k⁻²[k².== 0] .= 0;
+
+    return nothing
+end
+
+
+function Shearing_remapping!(sol, clock, vars, params)
+    q  = params.usr_params.q;
+    Ω  = params.usr_params.Ω;
+    τΩ = params.usr_params.tΩ;
+    Lx,Ly = grid.Lx,grid.Ly;
     
     #advect the shear time
     params.usr_params.τ += clock.dt;
     
     # correct the shear after every shear period
     if τ >= τΩ && clock.step > 1
-        FieldReMapping!(sol, clock, vars, params)
+        Field_remapping!(sol, clock, vars, params)
         params.usr_params.τ = 0;
     end
     
@@ -46,7 +71,7 @@ function ShearingReMapping!(sol, clock, vars, params)
     ky₀      = params.usr_params.ky₀;
     τ        = params.usr_params.τ;
     
-    # Construct the new shear
+    # Construct the new shear coordinate
     @. ky  = ky₀ + q*Ω*τ*kx;
     @. k²  = kx^2 + ky^2 + kz^2;
     @. k⁻² = 1/k²;
@@ -55,33 +80,32 @@ function ShearingReMapping!(sol, clock, vars, params)
     return nothing;
 end
 
-function FieldReMapping!!(sol, clock, vars, params)
-    q  = params.usr_params.q;
-    Ω  = params.usr_params.Ω;
-    Lx,Ly = grid.Lx,grid.Ly;
-    kx,ky,kz = grid.kr,grid.l,grid.m;
-    tmp = params.usr_params.tmp;
-    τΩ = Lx/Ly/q/Ω;
+function Field_remapping!(sol, clock, vars, params)
+  q  = params.usr_params.q;
+  Ω  = params.usr_params.Ω;
+  τΩ = params.usr_params.τΩ;
+  kx,ky,kz = grid.kr,grid.l,grid.m;
+  tmp = params.usr_params.tmp;
+
+  dky    = @. floor(q*Ω*τΩ*ky);
+  ky_new = @. ky + dky;
+  # Change ky_new from (1,nky,1) -> (nky,1,1)
+  ky_new = permutedims(ky_new,(2,1,3));
+  # boardcasting absdky to (nky,nky,1)
+  absdky = @. abs(ky .- ky_new);
+  absind = findall(maximum(ky) .>= view(ky_new,:,1) .>= minimum(ky));
     
-    dky    = @. floor(q*Ω*τΩ*ky);
-    ky_new = @. ky + dky;
-    # Change ky_new from (1,nky,1) -> (nky,1,1)
-    ky_new = permutedims(ky_new,(2,1,3));
-    # boardcasting absdky to (nky,nky,1)
-    absdky = @. abs(ky .- ky_new);
-    absind = findall(maximum(ky) .>= view(ky_new,:,1) .>= minimum(ky));
+  #Swap the data from ky -> ky'
+  for ind ∈ absind 
+    ind_new = argmin(absdky[:,ind]);
+    @views @. tmp[ind_new, :, :, :] = sol[ind, :, :, :];
+  end
     
-    #Swap the data from ky -> ky'
-    for ind ∈ absind 
-        ind_new = argmin(absdky[:,ind]);
-        @views @. tmp[ind_new, :, :, :] = sol[ind, :, :, :];
-    end
+  # Copy the data from tmp array to sol
+  copyto!(sol,tmp);
+  @. tmp*=0;
     
-    # Copy the data from tmp array to sol
-    copyto!(sol,tmp);
-    @. tmp*=0;
-    
-    return nothing;
+  return nothing;
 end
 
 function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
@@ -150,9 +174,9 @@ end
 function HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
   U₀xh = params.usr_params.U₀xh;
   U₀hy = params.usr_params.U₀yh;
-  U₀x = params.usr_params.U₀x;
-  U₀y = params.usr_params.U₀y;
-  Ω   = params.usr_params.Ω;
+  U₀x  = params.usr_params.U₀x;
+  U₀y  = params.usr_params.U₀y;
+  Ω    = params.usr_params.Ω;
   
   ux_ind,uy_ind = params.ux_ind,params.uy_ind;
   
@@ -219,7 +243,7 @@ function MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
 end
 
 function HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
-    
+
   #Update V + B Real Conponment
   @timeit_debug params.debugTimer "FFT Update" begin
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
@@ -234,7 +258,7 @@ function HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
   end
 
   @timeit_debug params.debugTimer "ShearingUpdate" begin
-  ShearingUpdate!(N, sol, t, clock, vars, params, grid);
+  HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
   end
   return nothing
 end

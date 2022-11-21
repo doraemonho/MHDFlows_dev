@@ -1,6 +1,6 @@
 module Shear
 # ----------
-# Shearing Box Module
+# Shearing Box Module Ref : The Astrophysical Journal, 928:113 (8pp), 2022 Apr
 # ----------
 
 export 

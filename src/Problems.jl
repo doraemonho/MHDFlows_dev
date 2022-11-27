@@ -11,9 +11,9 @@ The equation constructor from the array `L` of the coefficients of the linear te
 """
 function Setup_Equation(calcN!, grid::AbstractGrid{G}; T=nothing, Nl = 3) where G
   dims = tuple(size(grid.Krsq)...,Nl)
-  T = T == nothing ? T = cxtype(G) : T;
+  T = T == nothing ? T = cxtype(G) : T
   #Compatibility to FourierFlows.Equation 
-  L = zeros((1));
+  L = 0
   return FourierFlows.Equation(L, calcN!, grid; dims=dims)
 end
 

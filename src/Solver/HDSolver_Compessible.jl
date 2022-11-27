@@ -20,7 +20,7 @@ function ρUpdate!(N, sol, t, clock, vars, params, grid)
   pv₃h = @view sol[:,:,:,params.uz_ind];
 
   @. ∂ρ∂t*=0;
-  for (ρuᵢh,kᵢ) ∈ zip([pv₁h,pv₂h,pv₃h],[grid.kr,grid.l,grid.m])
+  for (ρuᵢh,kᵢ) ∈ zip((pv₁h,pv₂h,pv₃h),(grid.kr,grid.l,grid.m))
     # Perform the Actual Advection update
     @. ∂ρ∂t += -im*kᵢ*ρuᵢh;
   end
@@ -62,7 +62,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction = "x")
   ρuᵢuⱼ  = vars.nonlin1;  
   ρuᵢuⱼh = vars.nonlinh1;
 
-  for (uⱼ,kⱼ) ∈ zip([vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
+  for (uⱼ,kⱼ) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m))
     # pseudo part
     @. ρuᵢuⱼ  = ρ*uᵢ*uⱼ;
     # spectral part
@@ -80,7 +80,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction = "x")
   # viscosity part
   Sᵢⱼ ,ρSᵢⱼ  = vars.nonlin1 ,vars.nonlin2;  
   Sᵢⱼh,ρSᵢⱼh = vars.nonlinh1,vars.nonlinh2;
-  for (uⱼh,kⱼ,j) ∈ zip([vars.uxh,vars.uyh,vars.uzh],[grid.kr,grid.l,grid.m],[1,2,3])
+  for (uⱼh,kⱼ,j) ∈ zip((vars.uxh,vars.uyh,vars.uzh),(grid.kr,grid.l,grid.m),(1,2,3))
     if a == j
       @. Sᵢⱼh += im*(kᵢ*uᵢh - (k₁*u₁h + k₂*u₂h + k₃*u₃h)*0.3333333333);
     else

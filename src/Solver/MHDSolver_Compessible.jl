@@ -52,7 +52,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction = "x")
   #momentum and magnetic field part
   bᵢbⱼ_minus_ρuᵢuⱼ  = vars.nonlin1;  
   bᵢbⱼ_minus_ρuᵢuⱼh = vars.nonlinh1;
-  for (uⱼ,bⱼ,kⱼ) ∈ zip([vars.ux,vars.uy,vars.uz],[vars.bx,vars.by,vars.bz],[grid.kr,grid.l,grid.m])
+  for (uⱼ,bⱼ,kⱼ) ∈ zip((vars.ux,vars.uy,vars.uz),(vars.bx,vars.by,vars.bz),(grid.kr,grid.l,grid.m))
     # pseudo part
     @. bᵢbⱼ_minus_ρuᵢuⱼ  = bᵢ*bⱼ - ρ*uᵢ*uⱼ;
     # spectral part
@@ -70,7 +70,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction = "x")
   # viscosity part
   Sᵢⱼ ,ρSᵢⱼ  = vars.nonlin1 ,vars.nonlin2;  
   Sᵢⱼh,ρSᵢⱼh = vars.nonlinh1,vars.nonlinh2;
-  for (uⱼh,kⱼ,j) ∈ zip([vars.uxh,vars.uyh,vars.uzh],[grid.kr,grid.l,grid.m],[1,2,3])
+  for (uⱼh,kⱼ,j) ∈ zip((vars.uxh,vars.uyh,vars.uzh),(grid.kr,grid.l,grid.m),(1,2,3))
     if a == j
       @. Sᵢⱼh += im*(kᵢ*uᵢh - (k₁*u₁h + k₂*u₂h + k₃*u₃h)*0.3333333333);
     else

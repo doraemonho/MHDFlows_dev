@@ -21,7 +21,7 @@ using LinearAlgebra: mul!, ldiv!
 function VP_UᵢUpdate!(∂uᵢh∂t, kₐk⁻², a::Int, clock, vars, params, grid)
   χ = params.χ; 
   η = clock.dt*13/7; #η condition for AB3 Method
-  for (uⱼ,Uⱼ,kⱼ,j) ∈ zip([vars.ux,vars.uy,vars.uz],[params.U₀x,params.U₀y,params.U₀z],[grid.kr,grid.l,grid.m],[1, 2, 3])
+  for (uⱼ,Uⱼ,kⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(params.U₀x,params.U₀y,params.U₀z),(grid.kr,grid.l,grid.m),(1, 2, 3))
     
     @timeit_debug params.debugTimer "Pseudo" begin
       #The Volume Penalization term, Assuming U_wall = Uⱼ , j ∈ [x,y,z] direction
@@ -48,7 +48,7 @@ function VP_BᵢUpdate!(∂Bᵢh∂t, kₐk⁻², a::Int, clock, vars, params, g
   χ = params.χ; 
   η = clock.dt*13/7; #η condition for AB3 Method
   
-  for (bⱼ,Bⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[params.B₀x,params.B₀y,params.B₀z],[grid.kr,grid.l,grid.m],[1, 2, 3])
+  for (bⱼ,Bⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(params.B₀x,params.B₀y,params.B₀z),(grid.kr,grid.l,grid.m),(1, 2, 3))
     
     @timeit_debug params.debugTimer "Pseudo" begin
       #The Volume Penalization term, Assuming B_wall = Bⱼ, j ∈ [x,y,z] direction

@@ -54,8 +54,8 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
   @. ∂uᵢh∂t*= 0;
   bᵢbⱼ_minus_uᵢuⱼ  = vars.nonlin1;  
   bᵢbⱼ_minus_uᵢuⱼh = vars.nonlinh1;
-  for (bᵢ,uᵢ,kᵢ) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m])
-    for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1, 2, 3])
+  for (bᵢ,uᵢ,kᵢ) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m))
+    for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m), (1, 2, 3))
       
       @timeit_debug params.debugTimer "Pseudo" begin
         # Perform Computation in Real space
@@ -135,7 +135,7 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   uᵢbⱼ_minus_bᵢuⱼ  = vars.nonlin1;        
   uᵢbⱼ_minus_bᵢuⱼh = vars.nonlinh1;
   #Compute the first term, im ∑_j k_j*(b_iu_j - u_ib_j)
-  for (bⱼ,uⱼ,kⱼ,j) ∈ zip([vars.bx,vars.by,vars.bz],[vars.ux,vars.uy,vars.uz],[grid.kr,grid.l,grid.m],[1,2,3])
+  for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1,2,3))
     if a != j
       @timeit_debug params.debugTimer "Pseudo" begin
         # Perform Computation in Real space

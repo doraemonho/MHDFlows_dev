@@ -20,11 +20,13 @@ function GetA99vars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32, C 
   A = convert(T,1.0);
   b = convert(T,1.0);
   @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz) Fk e1x e1y e2x e2y e2z gi eⁱᶿ
+  A99 = A99_vars(A,b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ);
+
     
   if C
-    return  A99_vars(A,b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving_Compressible!
+    return  A99, A99ForceDriving_Compressible!
   else
-    return  A99_vars(A,b,Fk,e1x,e1y,e2x,e2y,e2z,gi,eⁱᶿ), A99ForceDriving!;  
+    return  A99, A99ForceDriving!;  
   end
 end
 

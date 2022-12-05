@@ -3,6 +3,12 @@ module Shear
 # Shearing Box Module Ref : The Astrophysical Journal, 928:113 (8pp), 2022 Apr
 # ----------
 
+#
+#Note: Haven't finish, check the name vars for the loops.
+#
+#
+#
+#
 export 
   Shearing_coordinate_update!,
   Shearing_remapping!,
@@ -163,7 +169,7 @@ function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
       @. kⱼUᵢh  = im*kⱼ*Uᵢh;
       ldiv!(kⱼUᵢ,grid.rfftplan,kⱼUᵢh);
       @. bⱼkⱼUᵢ = bⱼ*kⱼUᵢ;
-      mul!(Uⱼkⱼuᵢh,grid.rfftplan,uⱼkⱼuᵢ);
+      mul!(Uⱼkⱼuᵢh,grid.rfftplan,uⱼkⱼUᵢ);
       @. ∂bᵢ∂t += bⱼkⱼUᵢh;
     end
   end
@@ -200,7 +206,7 @@ function HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
       @. kⱼUᵢh  = im*kⱼ*Uᵢh;
       ldiv!(kⱼUᵢ,grid.rfftplan,kⱼUᵢh);
       @. uⱼkⱼUᵢ = uⱼ*kⱼUᵢ;
-      mul!(Uⱼkⱼuᵢh,grid.rfftplan,uⱼkⱼuᵢ);
+      mul!(Uⱼkⱼuᵢh,grid.rfftplan,uⱼkⱼUᵢ);
       @. ∂uᵢ∂t -= uⱼkⱼUᵢh;
     end
   end

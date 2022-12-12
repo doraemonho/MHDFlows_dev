@@ -50,9 +50,14 @@ include("pgen/A99ForceDriving.jl")
 include("pgen/TaylorGreenDynamo.jl")
 include("pgen/NegativeDamping.jl")
 
+DivVCorrection! = VPSolver.DivVCorrection!;
+DivBCorrection! = VPSolver.DivBCorrection!;
+
 export Problem,           
        TimeIntegrator!,
        Restart!,
+       DivVCorrection!,
+       DivBCorrection!,
        Cylindrical_Mask_Function,
        DivFreeSpectraMap,
        SetUpProblemIC!,

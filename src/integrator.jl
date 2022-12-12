@@ -117,6 +117,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
       #Corret b if VP method is turned on
       if (prob.flag.vp == true)
+        VPSolver.DivVCorrection!(prob)
         prob.flag.b == true ? VPSolver.DivBCorrection!(prob) : nothing;
       end
 

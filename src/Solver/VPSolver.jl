@@ -93,16 +93,16 @@ function DivBCorrection!(prob)
   @. vars.nonlinh1 *= 0;       
   ∑ᵢkᵢBᵢh_k² = vars.nonlinh1;
   ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
-  bxh = prob.sol[:, :, :, params.bx_ind];
-  byh = prob.sol[:, :, :, params.by_ind];
-  bzh = prob.sol[:, :, :, params.bz_ind];
-  ∑ᵢkᵢBᵢh_k² = @. -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
-  ∑ᵢkᵢBᵢh_k² = @. ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
+  @views bxh = prob.sol[:, :, :, params.bx_ind];
+  @views byh = prob.sol[:, :, :, params.by_ind];
+  @views bzh = prob.sol[:, :, :, params.bz_ind];
+  @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
+  @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
   
   # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
-  @. bxh  -= kᵢ.*∑ᵢkᵢBᵢh_k²;
-  @. byh  -= kⱼ.*∑ᵢkᵢBᵢh_k²;
-  @. bzh  -= kₖ.*∑ᵢkᵢBᵢh_k²;
+  @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
+  @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
+  @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
   
   #Update to Real Space vars
   ldiv!(vars.bx, grid.rfftplan, deepcopy(bxh));# deepcopy() since inverse real-fft destroys its input
@@ -133,16 +133,16 @@ function DivVCorrection!(prob)
   @. vars.nonlinh1 *= 0;       
   ∑ᵢkᵢUᵢh_k² = vars.nonlinh1;
   ∑ᵢkᵢUᵢ_k²  = vars.nonlin1;
-  uxh = prob.sol[:, :, :, params.ux_ind];
-  uyh = prob.sol[:, :, :, params.uy_ind];
-  uzh = prob.sol[:, :, :, params.uz_ind];
-  ∑ᵢkᵢUᵢh_k² = @. -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
-  ∑ᵢkᵢUᵢh_k² = @. ∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
+  @views uxh = prob.sol[:, :, :, params.ux_ind];
+  @views uyh = prob.sol[:, :, :, params.uy_ind];
+  @views uzh = prob.sol[:, :, :, params.uz_ind];
+  @. ∑ᵢkᵢUᵢh_k² =  -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
+  @. ∑ᵢkᵢUᵢh_k² =  ∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
   
   # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
-  uxh  .-= kᵢ.*∑ᵢkᵢUᵢh_k²;
-  uyh  .-= kⱼ.*∑ᵢkᵢUᵢh_k²;
-  uzh  .-= kₖ.*∑ᵢkᵢUᵢh_k²;
+  @. uxh  -= im*kᵢ.*∑ᵢkᵢUᵢh_k²;
+  @. uyh  -= im*kⱼ.*∑ᵢkᵢUᵢh_k²;
+  @. uzh  -= im*kₖ.*∑ᵢkᵢUᵢh_k²;
   
   #Update to Real Space vars
   ldiv!(vars.ux, grid.rfftplan, deepcopy(uxh));# deepcopy() since inverse real-fft destroys its input

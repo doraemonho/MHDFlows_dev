@@ -50,7 +50,7 @@ struct HDParams{usr_param,to} <: AbstractParams
 
 end
 
-struct CHDParams{usr_param} <: AbstractParams
+struct CHDParams{usr_param,to} <: AbstractParams
   "speed of sound"
         cₛ :: Number
   "small-scale (hyper)-viscosity coefficient for v"

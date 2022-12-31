@@ -7,7 +7,8 @@ using
   DocStringExtensions,
   HDF5,
   FFTW,
-  ProgressMeter
+  ProgressMeter,
+  TimerOutputs
 
 @reexport using FourierFlows
 

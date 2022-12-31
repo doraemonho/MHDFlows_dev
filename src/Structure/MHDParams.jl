@@ -1,4 +1,4 @@
-struct MHDParams_VP{Aphys,usr_param} <: AbstractParams
+struct MHDParams_VP{Aphys,usr_param,to} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: Number
@@ -39,7 +39,7 @@ struct MHDParams_VP{Aphys,usr_param} <: AbstractParams
 
 end
 
-struct MHDParams{usr_param} <: AbstractParams
+struct MHDParams{usr_param,to} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: Number
@@ -70,7 +70,7 @@ struct MHDParams{usr_param} <: AbstractParams
 
 end
 
-struct CMHDParams{usr_param} <: AbstractParams
+struct CMHDParams{usr_param,to} <: AbstractParams
   "speed of sound"
         cₛ :: Number
   "small-scale (hyper)-viscosity coefficient for v"

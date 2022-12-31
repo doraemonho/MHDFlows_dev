@@ -1,4 +1,4 @@
-struct HDParams_VP{Aphys,usr_param} <: AbstractParams
+struct HDParams_VP{Aphys,usr_param,to} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
     ν :: Number
@@ -27,7 +27,7 @@ struct HDParams_VP{Aphys,usr_param} <: AbstractParams
 
 end
 
-struct HDParams{usr_param} <: AbstractParams
+struct HDParams{usr_param,to} <: AbstractParams
     
   "small-scale (hyper)-viscosity coefficient for v"
    ν :: Number

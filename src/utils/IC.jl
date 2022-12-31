@@ -132,7 +132,7 @@ function DivFreeSpectraMap( grid;
   dk⁻² = @. 1/(k+1)^2;
   Fk   = @. k.^(k0);
   CUDA.@allowscalar Fk[1,1,1] = 0.0;
-
+  @. Fk[1,:,:] .= 0;
   ∫Fkdk  = sum(@. Fk*dk⁻²);
   A   = sqrt(P*3*(Lx/dx)*(Ly/dy)*(Lz/dz)/∫Fkdk*(1/dx/dy/dz));
   Fk*=A;

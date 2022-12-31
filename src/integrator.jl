@@ -164,7 +164,7 @@ function getCFL!(prob, t_diff; Coef = 0.3);
   v2xmax = square_maximum(ux);
   v2ymax = square_maximum(uy);
   v2zmax = square_maximum(uz);
-  vmax = sqrt(maximum([v2xmax,v2ymax,v2zmax]));
+  vmax = sqrt(maximum((v2xmax,v2ymax,v2zmax)));
   
   if prob.flag.b
     #Maxmium Alfvenic velocity 

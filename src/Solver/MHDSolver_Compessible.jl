@@ -5,6 +5,10 @@ module MHDSolver_compressible
 
 export MHDcalcN_advection!
 
+using
+  CUDA,
+  TimerOutputs
+
 include("MHDSolver.jl");
 include("HDSolver_Compessible.jl")
 ρUpdate! = HDSolver_compressible.ρUpdate!;
@@ -88,7 +92,7 @@ end
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
 
-  @timeit_debug params.debugTimer "FFT Update" begin
+  @timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     #Update ρ + P + V + B Real Conponment
     ldiv!(vars.ρ , grid.rfftplan, deepcopy(@view sol[:, :, :, params.ρ_ind ]));
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));

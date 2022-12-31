@@ -7,6 +7,10 @@ export HDcalcN_advection!,
        ρUpdate!
 using LinearAlgebra: mul!, ldiv!
 
+using
+  CUDA,
+  TimerOutputs
+  
 # Definition of physical parameter between real space and spectral sapce
 # fft  - space parameters -> ρ px py pz 
 # real - space parameters -> ρ ux uy uz
@@ -98,7 +102,7 @@ end
 function HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update ρ + P + V + B Real Conponment
-  @timeit_debug params.debugTimer "FFT Update" begin
+  @timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     ldiv!(vars.ρ , grid.rfftplan, deepcopy(@view sol[:, :, :, params.ρ_ind ]));
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
     ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));

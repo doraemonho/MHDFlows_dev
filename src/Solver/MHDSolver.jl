@@ -57,16 +57,16 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
   for (bᵢ,uᵢ,kᵢ) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m))
     for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m), (1, 2, 3))
       
-      @timeit_debug params.debugTimer "Pseudo" begin
+      @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
         # Perform Computation in Real space
         @. bᵢbⱼ_minus_uᵢuⱼ = bᵢ*bⱼ - uᵢ*uⱼ;     
       end
 
-      @timeit_debug params.debugTimer "Spectral" begin
+      @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
         mul!(bᵢbⱼ_minus_uᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_uᵢuⱼ);
       end
 
-      @timeit_debug params.debugTimer "Advection" begin
+      @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
         # Perform the Actual Advection update
         @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
       end
@@ -137,14 +137,14 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   #Compute the first term, im ∑_j k_j*(b_iu_j - u_ib_j)
   for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1,2,3))
     if a != j
-      @timeit_debug params.debugTimer "Pseudo" begin
+      @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
         # Perform Computation in Real space
         @. uᵢbⱼ_minus_bᵢuⱼ = uᵢ*bⱼ - bᵢ*uⱼ;
       end
-      @timeit_debug params.debugTimer "Spectral" begin
+      @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
         mul!(uᵢbⱼ_minus_bᵢuⱼh, grid.rfftplan, uᵢbⱼ_minus_bᵢuⱼ);
       end
-      @timeit_debug params.debugTimer "Advection" begin
+      @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
         # Perform the Actual Advection update
         @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼ_minus_bᵢuⱼh;  
       end
@@ -174,7 +174,7 @@ end
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Real Conponment
-  @timeit_debug params.debugTimer "FFT Update" begin
+  @timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
     ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
     ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
@@ -183,13 +183,13 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
     ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])); 
   end
   #Update V Advection
-  @timeit_debug params.debugTimer "UᵢUpdate" begin
+  @timeit_debug params.debugTimer "UᵢUpdate" CUDA.@sync begin
     UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
     UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
     UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z");
   end
   #Update B Advection
-  @timeit_debug params.debugTimer "BᵢUpdate" begin
+  @timeit_debug params.debugTimer "BᵢUpdate" CUDA.@sync begin
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z"); 

@@ -58,17 +58,17 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   for (uᵢ,kᵢ) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m))
     for (uⱼ,kⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
       
-      @timeit_debug params.debugTimer "Pseudo" begin
+      @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
         # Pre-Calculation in Real Space
         @. uᵢuⱼ = uᵢ*uⱼ;
       end
 
-      @timeit_debug params.debugTimer "Spectral" begin
+      @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
         # Fourier transform 
         mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
       end
 
-      @timeit_debug params.debugTimer "Advection" begin
+      @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
         # Perform the actual calculation
         @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
       end

@@ -23,18 +23,18 @@ function VP_UᵢUpdate!(∂uᵢh∂t, kₐk⁻², a::Int, clock, vars, params, g
   η = clock.dt*13/7; #η condition for AB3 Method
   for (uⱼ,Uⱼ,kⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(params.U₀x,params.U₀y,params.U₀z),(grid.kr,grid.l,grid.m),(1, 2, 3))
     
-    @timeit_debug params.debugTimer "Pseudo" begin
+    @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
       #The Volume Penalization term, Assuming U_wall = Uⱼ , j ∈ [x,y,z] direction
       χUᵢ_η  = vars.nonlin1; 
       χUᵢ_ηh = vars.nonlinh1;
       @. χUᵢ_η  =  χ/η*(uⱼ - Uⱼ);
     end
 
-    @timeit_debug params.debugTimer "Spectral" begin
+    @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
       mul!(χUᵢ_ηh, grid.rfftplan,  χUᵢ_η); 
     end 
 
-    @timeit_debug params.debugTimer "Advection" begin        
+    @timeit_debug params.debugTimer "Advection" CUDA.@sync begin        
       # Perform the Actual Advection update
       @. ∂uᵢh∂t += -(δ(a,j)-kⱼ*kₐk⁻²)*χUᵢ_ηh;  
     end
@@ -50,18 +50,18 @@ function VP_BᵢUpdate!(∂Bᵢh∂t, kₐk⁻², a::Int, clock, vars, params, g
   
   for (bⱼ,Bⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(params.B₀x,params.B₀y,params.B₀z),(grid.kr,grid.l,grid.m),(1, 2, 3))
     
-    @timeit_debug params.debugTimer "Pseudo" begin
+    @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
       #The Volume Penalization term, Assuming B_wall = Bⱼ, j ∈ [x,y,z] direction
       χbᵢ_η  = vars.nonlin1;
       χbᵢ_ηh = vars.nonlinh1;
       @.  χbᵢ_η  = χ/η*(bⱼ - Bⱼ);
     end
 
-    @timeit_debug params.debugTimer "Spectral" begin
+    @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
       mul!(χbᵢ_ηh, grid.rfftplan, χbᵢ_η);
     end
 
-    @timeit_debug params.debugTimer "Advection" begin
+    @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
       # Perform the Actual Advection update
       @. ∂Bᵢh∂t += -(δ(a,j)-kⱼ*kₐk⁻²)*χbᵢ_ηh;
     end

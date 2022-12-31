@@ -221,7 +221,7 @@ end
 function MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
     
   #Update V + B Real Conponment
-  @timeit_debug params.debugTimer "FFT Update" begin
+  @timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
     ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
     ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
@@ -230,19 +230,19 @@ function MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
     ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])); 
   end
   #Update V Advection
-  @timeit_debug params.debugTimer "UᵢUpdate" begin
+  @timeit_debug params.debugTimer "UᵢUpdate" CUDA.@sync begin
     MHDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
     MHDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
     MHDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z");
   end
   #Update B Advection
-  @timeit_debug params.debugTimer "BᵢUpdate" begin
+  @timeit_debug params.debugTimer "BᵢUpdate" CUDA.@sync begin
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z"); 
   end
 
-  @timeit_debug params.debugTimer "ShearingUpdate" begin
+  @timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
   MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
   end
   return nothing
@@ -251,19 +251,19 @@ end
 function HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Real Conponment
-  @timeit_debug params.debugTimer "FFT Update" begin
+  @timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
     ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
     ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
   end
   #Update V Advection
-  @timeit_debug params.debugTimer "UᵢUpdate" begin
+  @timeit_debug params.debugTimer "UᵢUpdate" CUDA.@sync begin
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z");
   end
 
-  @timeit_debug params.debugTimer "ShearingUpdate" begin
+  @timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
   HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
   end
   return nothing

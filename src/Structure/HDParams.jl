@@ -22,6 +22,9 @@ struct HDParams_VP{Aphys,usr_param} <: AbstractParams
   "User defined params"
   usr_params :: usr_param   
 
+  "Debug timer"
+  debugTimer :: to
+
 end
 
 struct HDParams{usr_param} <: AbstractParams
@@ -41,6 +44,10 @@ struct HDParams{usr_param} <: AbstractParams
 
   "User defined params"
  usr_params :: usr_param
+
+ "Debug timer"
+  debugTimer :: to
+
 end
 
 struct CHDParams{usr_param} <: AbstractParams
@@ -62,4 +69,8 @@ struct CHDParams{usr_param} <: AbstractParams
 
   "User defined params"
  usr_params :: usr_param
+
+ "Debug timer"
+  debugTimer :: to
+
 end

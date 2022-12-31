@@ -87,38 +87,47 @@ end
 
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
-  #Update ρ + P + V + B Real Conponment
-  ldiv!(vars.ρ , grid.rfftplan, deepcopy(@view sol[:, :, :, params.ρ_ind ]));
-  ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
-  ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
-  ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
-  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]));
-  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]));
-  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind]));
 
-  #Update momentum back to velocity
-  @. vars.ux/=vars.ρ;
-  @. vars.uy/=vars.ρ;
-  @. vars.uz/=vars.ρ;
-  
-  #Copy the spectral conponment to sketch array
-  mul!(vars.uxh, grid.rfftplan, vars.ux);
-  mul!(vars.uyh, grid.rfftplan, vars.uy);
-  mul!(vars.uzh, grid.rfftplan, vars.uz);
+  @timeit_debug params.debugTimer "FFT Update" begin
+    #Update ρ + P + V + B Real Conponment
+    ldiv!(vars.ρ , grid.rfftplan, deepcopy(@view sol[:, :, :, params.ρ_ind ]));
+    ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
+    ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
+    ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
+    ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]));
+    ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]));
+    ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind]));
+
+    #Update momentum back to velocity
+    @. vars.ux/=vars.ρ;
+    @. vars.uy/=vars.ρ;
+    @. vars.uz/=vars.ρ;
+
+
+    #Copy the spectral conponment to sketch array
+    mul!(vars.uxh, grid.rfftplan, vars.ux);
+    mul!(vars.uyh, grid.rfftplan, vars.uy);
+    mul!(vars.uzh, grid.rfftplan, vars.uz);
+  end
   
   #Update continuity equation
-  ρUpdate!(N, sol, t, clock, vars, params, grid);
-  
+  @timeit_debug params.debugTimer "ρ Update" CUDA.@sync begin
+    ρUpdate!(N, sol, t, clock, vars, params, grid);
+  end
+
   #Update V Advection
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x");
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y");
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z");
-  
+
+  @timeit_debug params.debugTimer "UᵢUpdate" CUDA.@sync begin
+    UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x");
+    UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y");
+    UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z");
+  end
   #Update B Advection
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x");
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y");
-  BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z"); 
-  
+  @timeit_debug params.debugTimer "BᵢUpdate" CUDA.@sync begin
+    BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x");
+    BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y");
+    BᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z"); 
+  end
   return nothing;
 end
 

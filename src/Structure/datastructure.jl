@@ -55,30 +55,34 @@ end
  function SetParams(::Dev, grid::AbstractGrid, calcF::Function, usr_params;
                      B = false, VP = false, C = false, S = false, cₛ = 0, ν = 0, η = 0, nν = 0, nη = 0) where Dev
   T = eltype(grid);
-  usr_param = typeof(usr_params);
+  usr_param = typeof(usr_params)
+  
+  # define the debug timer
+  to = TimerOutput();
+
   if (B)
     if (VP)
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z B₀x B₀y B₀z
       params = MHDParams_VP(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, χ, U₀x, U₀y, U₀z, B₀x, B₀y, B₀z, usr_params)
     elseif (C)
-      params = CMHDParams(cₛ,ν, η, nν, nη, 1, 2, 3, 4, 5, 6, 7, calcF, usr_params);
+      params = CMHDParams(cₛ,ν, η, nν, nη, 1, 2, 3, 4, 5, 6, 7, calcF, usr_params, to);
     elseif (S)
       shear_params = GetShearParams(Dev, grid, B);
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params);
+      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params, to);
     else
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params);
+      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params, to);
     end
   else
     if (VP)
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z
-      params = HDParams_VP(ν, nν, 1, 2, 3, calcF, χ, U₀x, U₀y, U₀z, usr_params);
+      params = HDParams_VP(ν, nν, 1, 2, 3, calcF, χ, U₀x, U₀y, U₀z, usr_params, to);
     elseif (C)
-      params = CHDParams(cₛ, ν, nν, 1, 2, 3, 4, calcF, usr_params);
+      params = CHDParams(cₛ, ν, nν, 1, 2, 3, 4, calcF, usr_params, to);
     elseif (S)
       shear_params = GetShearParams(Dev, grid, B);
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params);
+      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params, to);
     else
-      params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params);
+      params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params, to);
     end
   end
 

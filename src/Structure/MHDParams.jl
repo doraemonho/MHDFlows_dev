@@ -34,6 +34,9 @@ struct MHDParams_VP{Aphys,usr_param} <: AbstractParams
   "User defined params"
   usr_params :: usr_param
 
+  "Debug timer"
+  debugTimer :: to
+
 end
 
 struct MHDParams{usr_param} <: AbstractParams
@@ -61,6 +64,9 @@ struct MHDParams{usr_param} <: AbstractParams
   
   "User defined params"
  usr_params :: usr_param
+
+ "Debug timer"
+  debugTimer :: to
 
 end
 
@@ -91,5 +97,8 @@ struct CMHDParams{usr_param} <: AbstractParams
   
   "User defined params"
  usr_params :: usr_param
+
+ "Debug timer"
+  debugTimer :: to
 
 end

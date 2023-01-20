@@ -36,7 +36,7 @@ end
 function Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
     q  = params.usr_params.q;
     Ω  = params.usr_params.Ω;
-    τΩ = params.usr_params.tΩ;
+    τΩ = params.usr_params.τΩ;
     Lx,Ly = grid.Lx,grid.Ly;
     
     #Shear time intreval in sub-time-step
@@ -60,7 +60,7 @@ end
 function Shearing_remapping!(sol, clock, vars, params)
     q  = params.usr_params.q;
     Ω  = params.usr_params.Ω;
-    τΩ = params.usr_params.tΩ;
+    τΩ = params.usr_params.τΩ;
     Lx,Ly = grid.Lx,grid.Ly;
     
     #advect the shear time

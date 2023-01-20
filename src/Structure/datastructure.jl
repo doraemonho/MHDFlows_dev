@@ -100,7 +100,7 @@ function GetShearParams(dev, grid, B)
   Nₗ = ifelse(B,6,3)
   @devzeros dev Complex{T} (grid.nkr, grid.nl, grid.nm, Nₗ)  tmp
 
-  return SParams(0.0, 0.0, 0.0, 0.0, ky₀, U₀x, U₀y, U₀xh, U₀yh, tmp)
+  return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, U₀x, U₀y, U₀xh, U₀yh, tmp)
 end
 
 mutable struct SParams{ATs, Aphys, Atrans, Atmp} <: AbstractParams

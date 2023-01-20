@@ -73,7 +73,7 @@ end
 A problem that represents a partial differential equation.
 $(TYPEDFIELDS)
 """
-struct MHDFlowsProblem{T, A<:AbstractArray, Tg<:AbstractFloat, TL, Dye, usr_foo} <: AbstractProblem
+struct MHDFlowsProblem{T, A<:AbstractArray, Tg<:AbstractFloat, TL, Dye, usr_foo, AbstractGrid} <: AbstractProblem
     "the state vector"
           sol :: A
     "the problem's slock"
@@ -81,7 +81,7 @@ struct MHDFlowsProblem{T, A<:AbstractArray, Tg<:AbstractFloat, TL, Dye, usr_foo}
     "the equation"
           eqn :: FourierFlows.Equation{T, TL, Tg}
     "the grid"
-         grid :: AbstractGrid{Tg}
+         grid :: AbstractGrid
     "the variables"
          vars :: AbstractVars
     "the parameters"

@@ -2,7 +2,7 @@
 # Module for Setting up the data structure for HD and MHD problem
 # ----------
 
-function SetMHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
+function SetMHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz nonlin1
@@ -12,7 +12,7 @@ function SetMHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
                 nonlin1, nonlinh1, usr_vars);
 end
 
-function SetHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
+function SetHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz nonlin1 
@@ -22,7 +22,7 @@ function SetHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
                 nonlin1, nonlinh1, usr_vars);
 end
 
-function SetCMHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
+function SetCMHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ρ ux  uy  uz  bx  by bz nonlin1 nonlin2
@@ -32,7 +32,7 @@ function SetCMHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
                 nonlin1, nonlinh1, nonlin2, nonlinh2, usr_vars);
 end
 
-function SetCHDVars(::Dev, grid::AbstractGrid, usr_vars) where Dev
+function SetCHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ρ ux uy  uz nonlin1 nonlin2
@@ -52,7 +52,7 @@ function SetVars(dev, grid, usr_vars; B = false, VP = false, C =false)
   return setvars(dev, grid, usr_vars);
 end
 
- function SetParams(::Dev, grid::AbstractGrid, calcF::Function, usr_params;
+ function SetParams(::Dev, grid, calcF::Function, usr_params;
                      B = false, VP = false, C = false, S = false, cₛ = 0, ν = 0, η = 0, nν = 0, nη = 0) where Dev
   T = eltype(grid);
   usr_param = typeof(usr_params)

@@ -96,7 +96,11 @@ function Problem(dev::Device;
   end
 
   # Declare the grid
-  grid = ThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
+  if Shear
+    grid = GetShearingThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
+  else
+    grid = ThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
+  end
 
   # Declare vars
   vars = SetVars(dev, grid, usr_vars; B = B_field, VP = VP_method, C = Compressibility);
@@ -116,7 +120,7 @@ function Problem(dev::Device;
 
 end
 
-function Equation_with_forcing(dev, grid::AbstractGrid; B = false, C = false, S=false)
+function Equation_with_forcing(dev, grid; B = false, C = false, S=false)
   if C 
     Nₗ = ifelse(B,7,4);
   else

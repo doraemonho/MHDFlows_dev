@@ -50,25 +50,35 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
   	error("Warning : Unknown direction is declerad")
 
   end
-
+  #idea : we are computing ∂uᵢh∂t = im*kᵢ*(δₐⱼ - kₐkⱼk⁻²)*(bᵢbⱼ - uᵢuⱼh) 
+  #  as uᵢuⱼ = uⱼuᵢ in our case
+  #     1  2  3
+  #   1 11 12 13
+  #   2 21 22 23 , part of computation is repeated, 11(1),12(2),13(2),22(1),23(2),33(1)
+  #   3 31 32 33
+  #   Their only difference for u_ij is the advection part
   @. ∂uᵢh∂t*= 0;
   bᵢbⱼ_minus_uᵢuⱼ  = vars.nonlin1;  
   bᵢbⱼ_minus_uᵢuⱼh = vars.nonlinh1;
-  for (bᵢ,uᵢ,kᵢ) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m))
+  for (bᵢ,uᵢ,kᵢ,i) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1,2,3))
     for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m), (1, 2, 3))
-      
-      @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
-        # Perform Computation in Real space
-        @. bᵢbⱼ_minus_uᵢuⱼ = bᵢ*bⱼ - uᵢ*uⱼ;     
-      end
+      if i <= j
+        @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
+          # Perform Computation in Real space
+          @. bᵢbⱼ_minus_uᵢuⱼ = bᵢ*bⱼ - uᵢ*uⱼ;     
+        end
 
-      @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
-        mul!(bᵢbⱼ_minus_uᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_uᵢuⱼ);
-      end
+        @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
+          mul!(bᵢbⱼ_minus_uᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_uᵢuⱼ);
+        end
 
-      @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
-        # Perform the Actual Advection update
-        @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
+        @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
+          # Perform the Actual Advection update
+          @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
+          if i != j  # repeat the calculation for u_ij
+            @. ∂uᵢh∂t += im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
+          end
+        end
       end
     end
   end

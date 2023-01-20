@@ -30,21 +30,21 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   	a    = 1;
   	kₐ   = grid.kr;
   	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.ux_ind];
+  	∂uᵢh∂t = @view N[:,:,:,params.ux_ind::Int];
 
   elseif direction == "y"
 
   	a    = 2;
   	kₐ   = grid.l;
   	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.uy_ind];
+  	∂uᵢh∂t = @view N[:,:,:,params.uy_ind::Int];
     
   elseif direction == "z"
 
   	a    = 3;
   	kₐ   = grid.m;
   	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.uz_ind];
+  	∂uᵢh∂t = @view N[:,:,:,params.uz_ind::Int];
 
   else
 
@@ -55,24 +55,25 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   @. ∂uᵢh∂t*= 0;
   uᵢuⱼ  = vars.nonlin1;    
   uᵢuⱼh = vars.nonlinh1;
-  for (uᵢ,kᵢ) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m))
+  for (uᵢ,kᵢ,i) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
     for (uⱼ,kⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
-      
-      @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
-        # Pre-Calculation in Real Space
-        @. uᵢuⱼ = uᵢ*uⱼ;
+      if i <= j
+        @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
+          # Pre-Calculation in Real Space
+          @. uᵢuⱼ = uᵢ*uⱼ;
+        end
+        @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
+          # Fourier transform 
+          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
+        end
+        @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
+          # Perform the actual calculation
+          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
+          if i !=j
+            @. ∂uᵢh∂t += -im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*uᵢuⱼh
+          end
+        end
       end
-
-      @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
-        # Fourier transform 
-        mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
-      end
-
-      @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
-        # Perform the actual calculation
-        @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
-      end
-
     end
   end
   
@@ -92,16 +93,15 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
   end
 
-  return nothing
-    
+  return nothing   
 end
 
 function HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Real Conponment
-  ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
-  ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
-  ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
+  ldiv!(vars.ux, grid.rfftplan, @view sol[:, :, :, params.ux_ind]);
+  ldiv!(vars.uy, grid.rfftplan, @view sol[:, :, :, params.uy_ind]);
+  ldiv!(vars.uz, grid.rfftplan, @view sol[:, :, :, params.uz_ind]);
   
   #Update V Advection
   UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")

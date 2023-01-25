@@ -96,11 +96,12 @@ function GetShearParams(dev, grid, B)
   @devzeros dev T (grid.nx, grid.ny, grid.nz) U₀x U₀y
   @devzeros dev Complex{T} (grid.nkr, grid.nl, grid.nm)  U₀xh U₀yh
   ky₀ = copy(grid.l);
+  iky = copy(grid.l1D)
 
   Nₗ = ifelse(B,6,3)
   @devzeros dev Complex{T} (grid.nkr, grid.nl, grid.nm, Nₗ)  tmp
 
-  return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, U₀x, U₀y, U₀xh, U₀yh, tmp)
+  return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, iky, U₀x, U₀y, U₀xh, U₀yh, tmp)
 end
 
 mutable struct SParams{A1Daxis,A2Daxis, Aphys, Atrans, Atmp} <: AbstractParams

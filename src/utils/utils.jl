@@ -85,7 +85,7 @@ function GetShearingThreeDGrid(dev::Device=CPU(); nx, Lx, ny=nx, Ly=Lx, nz=nx, L
   
   R = typeof(x)
   A = typeof(k)
-  Axy = typeof(l)
+  Axy = typeof(l2D)
   Tfft = typeof(fftplan)
   Trfft = typeof(rfftplan)
   Talias = typeof(kalias)

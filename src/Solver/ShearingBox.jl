@@ -57,6 +57,7 @@ function Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
 end
 
 function Shearing_remapping!(sol, clock, vars, params, grid)
+    t  = clock.t
     q  = params.usr_params.q;
     Ω  = params.usr_params.Ω;
     τΩ = params.usr_params.τΩ;
@@ -66,7 +67,7 @@ function Shearing_remapping!(sol, clock, vars, params, grid)
     params.usr_params.τ += clock.dt;
     
     # correct the shear after every shear period
-    if τ >= τΩ && clock.step > 1
+    if t >= τΩ && clock.step > 1
         Field_remapping!(sol, clock, vars, params, grid)
         params.usr_params.τ = 0;
     end
@@ -120,6 +121,8 @@ function Field_remapping!(sol, clock, vars, params, grid)
   τΩ = params.usr_params.τΩ;
   kx,ky0 = grid.kr, grid.l1D
   tmp = params.usr_params.tmp;
+    
+  kymin,kymax = minimum(ky0),maximum(ky0)
   
   # Set up of CUDA threads & block
   threads = ( 32, 8, 1) #(9,9,9)
@@ -127,10 +130,10 @@ function Field_remapping!(sol, clock, vars, params, grid)
   Nfield  = size(sol,4)
 
   for n = 1:Nfield
-    fieldᵢ = (@view sol[:,:,:,n])::CuArray{T,3} 
-      tmpᵢ = (@view tmp[:,:,:,n])::CuArray{T,3}
+    fieldᵢ = (@view sol[:,:,:,n])::CuArray{Complex{T},3} 
+      tmpᵢ = (@view tmp[:,:,:,n])::CuArray{Complex{T},3}
     @cuda blocks = blocks threads = threads Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
-                                                                  q, Ω, τΩ, kx, ky0)
+                                                                  q, Ω, τΩ, kx, ky0,kymin, kymax)
   end
 
   # Copy the data from tmp array to sol
@@ -142,23 +145,31 @@ end
 
 
 function Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
-                               q, Ω, τΩ, kx, ky0)
+                               q, Ω, τΩ, kx, ky0, kymin, kymax)
   #define the i,j,k
   i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
   j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
   k = (blockIdx().z - 1) * blockDim().z + threadIdx().z 
   nx,ny,nz = size(fieldᵢ)
-
+  nky = length(ky0)
   if k ∈ (1:nz) && j ∈ (1:ny) && i ∈ (1:nx)
     dky   = floor(q*Ω*τΩ*kx[i])
     kynew = ky0[j] + dky
-    if  maxval(ky0) >= kynew >= minval(ky0)
-      jnew = minloc(abs(ky0 - kynew), 1)
+    if  kymax >= kynew >= kymin
+      mindky = 100   
+      jnew   = 1      
+      for kk = 1:nky
+        if mindky > abs(ky0[kk] - kynew)
+          jnew = kk  
+          mindky = abs(ky0[kk] - kynew)          
+        end
+      end
       tmpᵢ[i,jnew,k] = fieldᵢ[i,j,k]
     end
   end
   return nothing
 end
+
 
 function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
   U₀xh = params.usr_params.U₀xh;
@@ -288,9 +299,9 @@ function MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
     BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z"); 
   end
 
-  @timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
-  MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
-  end
+  #@timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
+  #MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
+  #end
   return nothing
 end
 
@@ -309,9 +320,9 @@ function HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z");
   end
 
-  @timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
-  HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
-  end
+  #@timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
+  #HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid);
+  #end
   return nothing
 end
 

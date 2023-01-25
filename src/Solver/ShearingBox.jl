@@ -29,7 +29,7 @@ MHDUᵢUpdate! = MHDSolver.UᵢUpdate!;
 BᵢUpdate! = MHDSolver.BᵢUpdate!;
 
 function Shearing_remapping!(prob)
-  Shearing_remapping!(prob.sol, prob.clock, prob.vars, prob.params);
+  Shearing_remapping!(prob.sol, prob.clock, prob.vars, prob.params, prob.grid);
   return nothing
 end
 
@@ -56,8 +56,7 @@ function Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
     return nothing
 end
 
-
-function Shearing_remapping!(sol, clock, vars, params)
+function Shearing_remapping!(sol, clock, vars, params, grid)
     q  = params.usr_params.q;
     Ω  = params.usr_params.Ω;
     τΩ = params.usr_params.τΩ;
@@ -68,7 +67,7 @@ function Shearing_remapping!(sol, clock, vars, params)
     
     # correct the shear after every shear period
     if τ >= τΩ && clock.step > 1
-        Field_remapping!(sol, clock, vars, params)
+        Field_remapping!(sol, clock, vars, params, grid)
         params.usr_params.τ = 0;
     end
     
@@ -86,17 +85,17 @@ function Shearing_remapping!(sol, clock, vars, params)
     return nothing;
 end
 
-function Field_remapping!(sol, clock, vars, params)
+function Field_remapping_old!(sol, clock, vars, params)
   q  = params.usr_params.q;
   Ω  = params.usr_params.Ω;
   τΩ = params.usr_params.τΩ;
   kx,ky,kz = grid.kr,grid.l,grid.m;
   tmp = params.usr_params.tmp;
 
-  dky    = @. floor(q*Ω*τΩ*ky);
-  ky_new = @. ky + dky;
-  # Change ky_new from (1,nky,1) -> (nky,1,1)
-  ky_new = permutedims(ky_new,(2,1,3));
+  dky    = @. floor(q*Ω*τΩ*kx); #size = (nkr, 1,1)
+  ky_new = @. ky + dky;         #size = (nkr,nl,1)
+  # Change ky_new from (1,nky,1) -> (nky,1,1) < ---
+  #ky_new = permutedims(ky_new,(2,1,3));      < --- 
   # boardcasting absdky to (nky,nky,1)
   absdky = @. abs(ky .- ky_new);
   absind = findall(maximum(ky) .>= view(ky_new,:,1) .>= minimum(ky));
@@ -112,6 +111,53 @@ function Field_remapping!(sol, clock, vars, params)
   @. tmp*=0;
     
   return nothing;
+end
+
+function Field_remapping!(sol, clock, vars, params, grid)
+  T  = eltype(grid)
+  q  = params.usr_params.q;
+  Ω  = params.usr_params.Ω;
+  τΩ = params.usr_params.τΩ;
+  kx,ky0 = grid.kr, grid.l1D
+  tmp = params.usr_params.tmp;
+  
+  # Set up of CUDA threads & block
+  threads = ( 32, 8, 1) #(9,9,9)
+  blocks  = ( ceil(Int,size(sol,1)/threads[1]), ceil(Int,size(sol,2)/threads[2]), ceil(Int,size(sol,3)/threads[3]))  
+  Nfield  = size(sol,4)
+
+  for n = 1:Nfield
+    fieldᵢ = (@view sol[:,:,:,n])::CuArray{T,3} 
+      tmpᵢ = (@view tmp[:,:,:,n])::CuArray{T,3}
+    @cuda blocks = blocks threads = threads Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
+                                                                  q, Ω, τΩ, kx, ky0)
+  end
+
+  # Copy the data from tmp array to sol
+  copyto!(sol,tmp);
+  @. tmp*=0;
+    
+  return nothing;
+end
+
+
+function Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
+                               q, Ω, τΩ, kx, ky0)
+  #define the i,j,k
+  i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+  j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
+  k = (blockIdx().z - 1) * blockDim().z + threadIdx().z 
+  nx,ny,nz = size(fieldᵢ)
+
+  if k ∈ (1:nz) && j ∈ (1:ny) && i ∈ (1:nx)
+    dky   = floor(q*Ω*τΩ*kx[i])
+    kynew = ky0[j] + dky
+    if  maxval(ky0) >= kynew >= minval(ky0)
+      jnew = minloc(abs(ky0 - kynew), 1)
+      tmpᵢ[i,jnew,k] = fieldᵢ[i,j,k]
+    end
+  end
+  return nothing
 end
 
 function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)

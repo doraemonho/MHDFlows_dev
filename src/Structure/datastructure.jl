@@ -103,7 +103,7 @@ function GetShearParams(dev, grid, B)
   return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, U₀x, U₀y, U₀xh, U₀yh, tmp)
 end
 
-mutable struct SParams{ATs, Aphys, Atrans, Atmp} <: AbstractParams
+mutable struct SParams{A1Daxis,A2Daxis, Aphys, Atrans, Atmp} <: AbstractParams
   "shear rate = dlnΩ/dlnr"
     q  :: AbstractFloat
   "Anagular velocty"
@@ -113,8 +113,10 @@ mutable struct SParams{ATs, Aphys, Atrans, Atmp} <: AbstractParams
   "Remapping peroid"
     τΩ :: AbstractFloat
   "spectral ky at t = 0"
-  ky₀ :: ATs
-  
+  ky₀ :: A2Daxis
+  "spectral ky in 1D at t = 0"
+  iky :: A1Daxis
+
   "Background shear velocity in real/spectral space"
   U₀x   :: Aphys
   U₀y   :: Aphys

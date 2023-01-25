@@ -61,21 +61,18 @@ function GetShearingThreeDGrid(dev::Device=CPU(); nx, Lx, ny=nx, Ly=Lx, nz=nx, L
 
   # Wavenubmer grid
    k = device_array(dev){T}(reshape( fftfreq(nx, 2π/Lx*nx), (nk, 1, 1)))
-   l = device_array(dev){T}(reshape( fftfreq(ny, 2π/Ly*ny), (1, nl, 1)) .* ones( nk, 1, 1))
-  lr = device_array(dev){T}(reshape( fftfreq(ny, 2π/Ly*ny), (1, nl, 1)) .* ones(nkr, 1, 1))
+ l1D = device_array(dev){T}(reshape( fftfreq(ny, 2π/Ly*ny), (1, nl, 1)))
+ l2D = device_array(dev){T}(reshape( fftfreq(ny, 2π/Ly*ny), (1, nl, 1)) .* ones(nkr, 1, 1))
    m = device_array(dev){T}(reshape( fftfreq(nz, 2π/Lz*nz), ( 1, 1, nm)))
   kr = device_array(dev){T}(reshape(rfftfreq(nx, 2π/Lx*nx), (nkr, 1, 1)))
 
-     Ksq = @. k^2 + l^2 + m^2
+     Ksq = @. k^2 + l1D^2 + m^2
   invKsq = @. 1 / Ksq
   CUDA.@allowscalar invKsq[1, 1, 1] = 0
 
-     Krsq = @. kr^2 + lr^2 + m^2
+     Krsq = @. kr^2 + l1D^2 + m^2
   invKrsq = @. 1 / Krsq
   CUDA.@allowscalar invKrsq[1, 1, 1] = 0
-
-  # Replace l for lr in the later stage
-   l = lr
 
   # FFT plans
   FFTW.set_num_threads(nthreads)
@@ -95,9 +92,9 @@ function GetShearingThreeDGrid(dev::Device=CPU(); nx, Lx, ny=nx, Ly=Lx, nz=nx, L
   D = typeof(dev)
 
   return ShearingThreeDGrid{T, A, Axy, R, Tfft, Trfft, Talias, D}(dev, nx, ny, nz, nk, nl, nm, nkr,
-                                                             dx, dy, dz, Lx, Ly, Lz, x, y, z, k, l, m, kr,
-                                                             Ksq, invKsq, Krsq, invKrsq, fftplan, rfftplan, 
-                                                             aliased_fraction, kalias, kralias, lalias, malias)
+                                                                  dx, dy, dz, Lx, Ly, Lz, x, y, z, k, l1D, l2D, m, kr,
+                                                                  Ksq, invKsq, Krsq, invKrsq, fftplan, rfftplan, 
+                                                                  aliased_fraction, kalias, kralias, lalias, malias)
 end
 
 struct ShearingThreeDGrid{T<:AbstractFloat, Tk, Tky, Tx, Tfft, Trfft, Talias, D}  <: FourierFlows.AbstractGrid{T, Tk, Talias, D}
@@ -137,7 +134,9 @@ struct ShearingThreeDGrid{T<:AbstractFloat, Tk, Tky, Tx, Tfft, Trfft, Talias, D}
                  z :: Tx
     "array with ``x``-wavenumbers"
                  k :: Tk
-    "array with ``y``-wavenumbers"
+    "array with ``y``-wavenumbers(1D)"
+               l1D :: Tk
+    "array with ``y``-wavenumbers(2D)"
                  l :: Tky
     "array with ``z``-wavenumbers"
                  m :: Tk

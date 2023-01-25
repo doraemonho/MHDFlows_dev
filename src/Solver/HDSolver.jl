@@ -58,20 +58,16 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   for (uᵢ,kᵢ,i) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
     for (uⱼ,kⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
       if i <= j
-        @timeit_debug params.debugTimer "Pseudo" CUDA.@sync begin
-          # Pre-Calculation in Real Space
-          @. uᵢuⱼ = uᵢ*uⱼ;
-        end
-        @timeit_debug params.debugTimer "Spectral" CUDA.@sync begin
-          # Fourier transform 
-          mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
-        end
-        @timeit_debug params.debugTimer "Advection" CUDA.@sync begin
-          # Perform the actual calculation
-          @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
-          if i !=j
-            @. ∂uᵢh∂t += -im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*uᵢuⱼh
-          end
+        # Pre-Calculation in Real Space
+        @. uᵢuⱼ = uᵢ*uⱼ;
+
+        # Fourier transform 
+        mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
+
+        # Perform the actual calculation
+        @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
+        if i !=j
+          @. ∂uᵢh∂t += -im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*uᵢuⱼh
         end
       end
     end
@@ -79,7 +75,7 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   
   # Updating the solid domain if VP flag is ON
   if VP_is_turned_on(params) 
-    @timeit_debug params.debugTimer "VP Uᵢ" VPSolver.VP_UᵢUpdate!(∂uᵢh∂t, kₐ.*k⁻², a, clock, vars, params, grid)
+    VPSolver.VP_UᵢUpdate!(∂uᵢh∂t, kₐ.*k⁻², a, clock, vars, params, grid)
   end
 
   #Compute the diffusion term  - νk^2 u_i

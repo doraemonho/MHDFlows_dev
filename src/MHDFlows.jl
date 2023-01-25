@@ -2,7 +2,9 @@ module MHDFlows
 
 using 
   CUDA,
+  FastBroadcast,
   Statistics,
+  Random,
   Reexport,
   DocStringExtensions,
   HDF5,

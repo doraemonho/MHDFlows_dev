@@ -233,7 +233,7 @@ end
 function local_SF_CUDA!(iv::CuArray{T,3},jv::CuArray{T,3},kv::CuArray{T,3},
                         ib::CuArray{T,3},jb::CuArray{T,3},kb::CuArray{T,3},
                         xps,yps,zps,
-                        Mask,SFVr,R)
+                        Mask,SFVr,R) where T
   #define the i,j,k
   i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
   j = (blockIdx().y - 1) * blockDim().y + threadIdx().y

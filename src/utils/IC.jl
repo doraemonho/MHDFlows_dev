@@ -111,13 +111,13 @@ Construct a Div Free Spectra Vector Map with power-law relation
 function DivFreeSpectraMap( Nx::Int, Ny::Int, Nz::Int;
                             Lx = 2π,
                             dev = CPU(), 
-                            P = 1, k0 = -5/3/2, b = 1, T = Float64)
+                            P = 1, k0 = -5/3/2, b = 1, T = Float64, k_peak = 0.0)
   grid = ThreeDGrid(dev; nx = Nx, Lx = Lx, ny=Ny, nz=Nz, T = T,nthreads = 8);
-  return DivFreeSpectraMap( grid; P = P, k0 = k0, b = b);
+  return DivFreeSpectraMap( grid; k_peak = k_peak, P = P, k0 = k0, b = b);
 end
 
 function DivFreeSpectraMap( grid;
-                            P = 1, k0 = -5/3/2, b = 1)
+                            k_peak = 0.0, P = 1, k0 = -5/3/2, b = 1)
     
   T = eltype(grid);  
   @devzeros typeof(grid.device) Complex{T} (grid.nkr,grid.nl,grid.nm) eⁱᶿ Fk Fxh Fyh Fzh 
@@ -133,6 +133,7 @@ function DivFreeSpectraMap( grid;
   Fk   = @. k.^(k0);
   CUDA.@allowscalar Fk[1,1,1] = 0.0;
   @. Fk[1,:,:] .= 0;
+  Fk[k.<k_peak] .= 0;
   ∫Fkdk  = sum(@. Fk*dk⁻²);
   A   = sqrt(P*3*(Lx/dx)*(Ly/dy)*(Lz/dz)/∫Fkdk*(1/dx/dy/dz));
   Fk*=A;

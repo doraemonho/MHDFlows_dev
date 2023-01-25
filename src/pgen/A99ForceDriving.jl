@@ -43,19 +43,18 @@ function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
   eⁱᶿ, gi =  vars.usr_vars.eⁱᶿ, vars.usr_vars.gi;
   Φ  = vars.nonlinh1;
     
-  # Work out the first conponement
-  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
-  Φ   .= randN(Complex{T},grid.nkr,grid.nl,grid.nm).*π;
+  @. eⁱᶿ = exp(@.. im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  rand!(Φ); @. Φ*=π;
   @. gi  = -tanh(b*(Φ - π/2))/tanh(b*π/2);
   @. N[:,:,:,params.ux_ind] += A*Fk*eⁱᶿ*gi*e1x;
   @. N[:,:,:,params.uy_ind] += A*Fk*eⁱᶿ*gi*e1y;
     
   # Work out the second conponement
-  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
-  @. gi  = √(1 - gi.^2); 
+  @. eⁱᶿ .= exp(@.. im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  @. gi  = √(@.. 1 - gi^2); 
   @. N[:,:,:,params.ux_ind] += A*Fk*eⁱᶿ*gi*e2x;
   @. N[:,:,:,params.uy_ind] += A*Fk*eⁱᶿ*gi*e2y;
-  @. N[:,:,:,params.uz_ind] += A*Fk*eⁱᶿ*gi*e2z;
+  @. N[:,:,:,params.uz_ind] += A*Fk*eⁱᶿ*gi*e2z;   
 
   return nothing
 end
@@ -74,15 +73,15 @@ function A99ForceDriving_Compressible!(N, sol, t, clock, vars, params, grid)
   Φ  = vars.nonlinh1;
     
   # Work out the first conponement
-  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
-  Φ   .= randN(Complex{T},grid.nkr,grid.nl,grid.nm).*π;
+  @. eⁱᶿ = exp(@.. im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  rand!(Φ); @. Φ*=π;
   @. gi  = -tanh(b*(Φ - π/2))/tanh(b*π/2);
   
   aᵢtoFᵢ!(view(N,:,:,:,params.ux_ind),A.*Fk.*eⁱᶿ.*gi.*e1x,vars,grid);
   aᵢtoFᵢ!(view(N,:,:,:,params.uy_ind),A.*Fk.*eⁱᶿ.*gi.*e1y,vars,grid);
     
   # Work out the second conponement
-  eⁱᶿ .= exp.(im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
+  @. eⁱᶿ = exp(@.. im.*randN(T,grid.nkr,grid.nl,grid.nm)*2π);
   @. gi  = √(1 - gi.^2); 
   aᵢtoFᵢ!(view(N,:,:,:,params.ux_ind),A.*Fk.*eⁱᶿ.*gi.*e2x,vars,grid);
   aᵢtoFᵢ!(view(N,:,:,:,params.uy_ind),A.*Fk.*eⁱᶿ.*gi.*e2y,vars,grid);

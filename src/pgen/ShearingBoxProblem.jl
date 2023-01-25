@@ -10,10 +10,10 @@ function Setup_Shearingbox!(prob; q = 0.0, Ω = 0.0, U₀x = [], U₀y = [])
   usr_params = params.usr_params;
   Lx,Ly = grid.Lx,grid.Ly;
   
-  τΩ = Lx/Ly/q/Ω;
+  τΩ = abs(Lx/Ly/q/Ω)
   usr_params.τΩ = T(τΩ)
-  usr_params.Ω = T(Ω)
-  usr_params.q = T(q)
+  usr_params.Ω  = T(Ω)
+  usr_params.q  = T(q)
   copyto!(usr_params.ky₀ , grid.l)
 
   params.usr_params

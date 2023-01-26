@@ -97,26 +97,30 @@ function GetShearParams(dev, grid, B)
   @devzeros dev Complex{T} (grid.nkr, grid.nl, grid.nm)  U₀xh U₀yh
   ky₀ = copy(grid.l);
   iky = copy(grid.l1D)
-
+  k2xz= @. grid.kr^2 + grid.m^2
   Nₗ = ifelse(B,6,3)
   @devzeros dev Complex{T} (grid.nkr, grid.nl, grid.nm, Nₗ)  tmp
 
-  return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, iky, U₀x, U₀y, U₀xh, U₀yh, tmp)
+
+  return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, k2xz, iky, U₀x, U₀y, U₀xh, U₀yh, tmp)
 end
 
 mutable struct SParams{A1Daxis,A2Daxis, Aphys, Atrans, Atmp} <: AbstractParams
   "shear rate = dlnΩ/dlnr"
     q  :: AbstractFloat
-  "Anagular velocty"
-    Ω  :: AbstractFloat
   "built-in time"
     τ  :: AbstractFloat
   "Remapping peroid"
     τΩ :: AbstractFloat
+  "diffusion Coef."
+     ν :: AbstractFloat
   "spectral ky at t = 0"
-  ky₀ :: A2Daxis
+   ky₀ :: A2Daxis
+  "spectral kx² + kz² at t = 0"
+   k2xz:: A2Daxis
   "spectral ky in 1D at t = 0"
-  iky :: A1Daxis
+   iky :: A1Daxis
+
 
   "Background shear velocity in real/spectral space"
   U₀x   :: Aphys

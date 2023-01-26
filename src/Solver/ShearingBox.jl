@@ -35,7 +35,6 @@ end
 
 function Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
   q  = params.usr_params.q;
-  Ω  = params.usr_params.Ω;
   τΩ = params.usr_params.τΩ;
   Lx,Ly = grid.Lx,grid.Ly;
   
@@ -48,7 +47,7 @@ function Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
   τ        = params.usr_params.τ;
   
   # Construct the new shear coordinate
-  @. ky  = ky₀ + q*Ω*(τ+dτ)*kx;
+  @. ky  = ky₀ + q*(τ+dτ)*kx;
   @. k²  = kx^2 + ky^2 + kz^2;
   @. k⁻² = 1/k²;
   @views @. k⁻²[k².== 0] .= 0;
@@ -59,7 +58,6 @@ end
 function Shearing_remapping!(sol, clock, vars, params, grid)
   t  = clock.t
   q  = params.usr_params.q;
-  Ω  = params.usr_params.Ω;
   τΩ = params.usr_params.τΩ;
   Lx,Ly = grid.Lx,grid.Ly;
   
@@ -77,7 +75,6 @@ end
 function Field_remapping!(sol, clock, vars, params, grid)
   T  = eltype(grid)
   q  = params.usr_params.q;
-  Ω  = params.usr_params.Ω;
   τΩ = params.usr_params.τΩ;
   kx,ky0 = grid.kr, grid.l1D
   tmp = params.usr_params.tmp;
@@ -93,7 +90,7 @@ function Field_remapping!(sol, clock, vars, params, grid)
     fieldᵢ = (@view sol[:,:,:,n])::CuArray{Complex{T},3} 
       tmpᵢ = (@view tmp[:,:,:,n])::CuArray{Complex{T},3}
     @cuda blocks = blocks threads = threads Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
-                                                                  q, Ω, τΩ, kx, ky0,kymin, kymax)
+                                                                  q, τΩ, kx, ky0,kymin, kymax)
   end
 
   # Copy the data from tmp array to sol
@@ -108,7 +105,6 @@ function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
   U₀yh = params.usr_params.U₀yh;
   U₀x  = params.usr_params.U₀x;
   U₀y  = params.usr_params.U₀y;
-  Ω    = params.usr_params.Ω;
   q    = params.usr_params.q;
   
   ux_ind,uy_ind = params.ux_ind,params.uy_ind;
@@ -123,7 +119,7 @@ function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
 end
 
 function Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
-                               q, Ω, τΩ, kx, ky0, kymin, kymax)
+                               q, τΩ, kx, ky0, kymin, kymax)
   #define the i,j,k
   i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
   j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
@@ -131,7 +127,7 @@ function Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
   nx,ny,nz = size(fieldᵢ)
   nky = length(ky0)
   if k ∈ (1:nz) && j ∈ (1:ny) && i ∈ (1:nx)
-    dky   = floor(q*Ω*τΩ*kx[i])
+    dky   = floor(q*τΩ*kx[i])
     kynew = ky0[j] + dky
     if  kymax >= kynew >= kymin
       mindky = 100   

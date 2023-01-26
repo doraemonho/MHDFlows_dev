@@ -4,7 +4,6 @@ using
   CUDA,
   FastBroadcast,
   Statistics,
-  Random,
   Reexport,
   DocStringExtensions,
   HDF5,
@@ -14,6 +13,7 @@ using
 
 @reexport using FourierFlows
 
+using Random: rand!
 using LinearAlgebra: mul!, ldiv!
 import Base: show, summary
 

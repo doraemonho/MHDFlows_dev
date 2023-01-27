@@ -4,9 +4,9 @@ module TurbStatTool
 # Author : Ka Wai HO @ UW-Madison
 # Date   : 6 Jan 2023
 using CUDA
-using PyPlot, FFTW, Statistics, LsqFit
-using MuladdMacro:@muladd
-using ProgressMeter
+#using PyPlot, FFTW, Statistics, LsqFit
+#using MuladdMacro:@muladd
+#using ProgressMeter
 
 # Structure function/ Correrlation Function
 export SFr,CF,SFC

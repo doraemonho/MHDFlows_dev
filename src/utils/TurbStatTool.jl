@@ -88,6 +88,37 @@ function SFr(iv,jv,kv, ib,jb,kb, mode;GPU = true, r=100,Nseed=500)
 end
 
 
+# 2 point radial structure function for 3D peroderic simulation
+function SF₂1D(Vx::Cube,Vz::Cube,Vy::Cube)
+  Nx,Ny,Nz = size(Vx);
+  R        = sqrt(s(div(Nx,2),div(Ny,2),div(Nz,2)));
+  
+  #get the structure function 
+  SFVx  = SFC(Vx);
+  SFVy  = SFC(Vy);
+  SFVz  = SFC(Vz);
+  #get the vector structure function
+  SFV   = @. SFVx + SFVy + SFVz;
+  #declaring the output
+  R    = RoundUpInt(R);
+  Mask = zeros(R);
+  SFVr = zeros(R);
+
+  for k in 1:Nz, j in 1:Ny, i in 1:Nx
+    # get the k vector
+    idx = i-div(Nx,2);
+    jdx = j-div(Ny,2);
+    kdx = k-div(Nz,2);
+    kk  = round(Int,sqrt(s(idx,jdx,kdx)))
+    if kk>0
+      Mask[k] += 1; 
+      SFVr[k] += SFV[i,j,k];
+    end
+  end
+  SFVr./=Mask;
+  SFVr
+end
+
 #provding 2 point Global structure point function for vector (Vx,Vy,Vz)
 #Note : X-axis means prallel to B-field, Y-axis means perpendicular to B-field
 function SFr_Global(Vx::Cube,Vz::Cube,Vy::Cube,bx::Cube,by::Cube,bz::Cube)

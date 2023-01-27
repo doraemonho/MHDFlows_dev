@@ -67,8 +67,8 @@ end
     elseif (C)
       params = CMHDParams(cₛ,ν, η, nν, nη, 1, 2, 3, 4, 5, 6, 7, calcF, usr_params, to);
     elseif (S)
-      shear_params = GetShearParams(Dev, grid, B);
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params, to);
+      shear_params = GetShearParams(Dev, grid, B; ν=ν, η=η);
+      params = MHDParams(0.0, 0.0, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params, to);
     else
       params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params, to);
     end
@@ -79,8 +79,8 @@ end
     elseif (C)
       params = CHDParams(cₛ, ν, nν, 1, 2, 3, 4, calcF, usr_params, to);
     elseif (S)
-      shear_params = GetShearParams(Dev, grid, B);
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params, to);
+      shear_params = GetShearParams(Dev, grid, B; ν=ν, η=0.0);
+      params = HDParams(0.0, nν, 1, 2, 3, calcF, usr_params, to);
     else
       params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params, to);
     end
@@ -90,7 +90,7 @@ end
 
 end
 
-function GetShearParams(dev, grid, B)
+function GetShearParams(dev, grid, B; ν = 0.0, η = 0.0)
   T = eltype(grid)
 
   @devzeros dev T (grid.nx, grid.ny, grid.nz) U₀x U₀y
@@ -101,8 +101,7 @@ function GetShearParams(dev, grid, B)
   Nₗ = ifelse(B,6,3)
   @devzeros dev Complex{T} (grid.nkr, grid.nl, grid.nm, Nₗ)  tmp
 
-
-  return SParams(T(0.0), T(0.0), T(0.0), T(0.0), ky₀, k2xz, iky, U₀x, U₀y, U₀xh, U₀yh, tmp)
+  return SParams(T(0.0), T(0.0), T(0.0), T(ν), ky₀, k2xz, iky, U₀x, U₀y, U₀xh, U₀yh, tmp)
 end
 
 mutable struct SParams{A1Daxis,A2Daxis, Aphys, Atrans, Atmp} <: AbstractParams
@@ -120,7 +119,6 @@ mutable struct SParams{A1Daxis,A2Daxis, Aphys, Atrans, Atmp} <: AbstractParams
    k2xz:: A2Daxis
   "spectral ky in 1D at t = 0"
    iky :: A1Daxis
-
 
   "Background shear velocity in real/spectral space"
   U₀x   :: Aphys

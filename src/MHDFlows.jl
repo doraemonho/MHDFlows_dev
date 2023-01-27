@@ -48,6 +48,7 @@ include("utils/MHDAnalysis.jl")
 include("utils/GeometryFunction.jl")
 include("utils/IC.jl")
 include("utils/UserInterface.jl")
+nclude("utils/TurbStatTool.jl")
 
 #pgen module
 include("pgen/A99ForceDriving.jl")

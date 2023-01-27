@@ -21,27 +21,29 @@ function eSSPIFRK3TimeStepper(equation, dev::Device=CPU())
   return eSSPIFRK3TimeStepper(L₀, L₁, L₂, L₃, u₀, u₁, u₂, N₀, N₁, N₂)
 end
 
-function getL!(Lᵢ, t, clock, params, grid)
+function getL!(Lᵢ, t, clock, vars, params, grid)
   q  = params.usr_params.q;
   ν  = params.usr_params.ν;
   
   kx,ky,kz = grid.kr,grid.l,grid.m
   ky₀      = params.usr_params.ky₀
-  k2xz     = params.usr_params.k2xz
-  Krsq     = grid.Krsq
+  k²xz     = params.usr_params.k2xz
+  k²     = vars.nonlinh1
   dt       = t - clock.t 
   τ        = params.usr_params.τ + dt
   
-  @. ky   = ky₀ + q*τ*kx
-  @. k2xz = kx^2 + kz^2
-  @. Lᵢ   = -ν*(k2xz^2*ky + 2/3*k2xz*ky^3 + ky^5/5)/(q*kx)
-  @. Lᵢ   = Lᵢ/maximum(Krsq)^2
-  @. @views Lᵢ[1,:,:] = 0
+  @. ky   = ky₀  + q*τ*kx
+  @. k²xz = kx^2 + kz^2
+  @. Lᵢ   = -ν*(k²xz*ky + ky^3/3)/(q*kx)
+  @. k²   = k²xz + ky₀^2
+  @. @views Lᵢ[1,:,:] = -k²[1,:,:]*ν*τ
+#  @. @views Lᵢ = -Krsq*ν*τ
   return nothing
 end
 
-stepforward!(prob) =
-  stepforward!(prob.sol, prob.clock, prob.timestepper, prob.eqn, prob.vars, prob.params, prob.grid)
+function stepforward!(sol, clock, timestepper, eqn, vars, params, grid)
+  FourierFlows.stepforward!(sol, clock, timestepper, eqn, vars, params, grid)
+end
 
 function stepforward!(sol, clock, ts::eSSPIFRK3TimeStepper, equation, vars, params, grid)
   eSSPIFRK3substeps!(sol, clock, ts, equation, vars, params, grid)
@@ -50,15 +52,14 @@ function stepforward!(sol, clock, ts::eSSPIFRK3TimeStepper, equation, vars, para
   return nothing
 end
 
-# L\_i has to change
 function eSSPIFRK3substeps!(sol, clock, ts, equation, vars, params, grid)
 
   dt = clock.dt
   t  = clock.t
-  getL!(ts.L₀, t         , clock, params, grid)
-  getL!(ts.L₁, t + 2/3*dt, clock, params, grid)
-  getL!(ts.L₂, t + 2/3*dt, clock, params, grid)
-  getL!(ts.L₃, t +     dt, clock, params, grid)
+  getL!(ts.L₀, t         , clock, vars, params, grid)
+  getL!(ts.L₁, t + 2/3*dt, clock, vars, params, grid)
+  getL!(ts.L₂, t + 2/3*dt, clock, vars, params, grid)
+  getL!(ts.L₃, t +     dt, clock, vars, params, grid)
   
   # Substep 1
   copyto!(ts.u₀, sol)

@@ -101,8 +101,8 @@ function SF₂1D(Vx::Cube,Vz::Cube,Vy::Cube)
   SFV   = @. SFVx + SFVy + SFVz;
   #declaring the output
   R    = RoundUpInt(R);
-  Mask = zeros(R);
-  SFVr = zeros(R);
+  Mask = zeros(2*R);
+  SFVr = zeros(2*R);
 
   for k in 1:Nz, j in 1:Ny, i in 1:Nx
     # get the k vector
@@ -111,8 +111,8 @@ function SF₂1D(Vx::Cube,Vz::Cube,Vy::Cube)
     kdx = k-div(Nz,2);
     kk  = round(Int,sqrt(s(idx,jdx,kdx)))
     if kk>0
-      Mask[k] += 1; 
-      SFVr[k] += SFV[i,j,k];
+      Mask[kk] += 1; 
+      SFVr[kk] += SFV[i,j,k];
     end
   end
   SFVr./=Mask;

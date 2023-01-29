@@ -51,6 +51,7 @@ include("utils/UserInterface.jl")
 include("utils/TurbStatTool.jl")
 
 #pgen module
+include("pgen/A99ForceDriving_GPU.jl")
 include("pgen/A99ForceDriving.jl")
 include("pgen/TaylorGreenDynamo.jl")
 include("pgen/NegativeDamping.jl")

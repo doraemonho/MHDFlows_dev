@@ -14,7 +14,7 @@ export SFr,CF,SFC
 # contour/ fitting function
 export fitline, Getcontour
 
-#============= synatex sugar & basic function/type definition ======================# 
+#================ synatex sugar & basic function/type definition ======================# 
 
 # Type definition from LazType
 const  Mat{T}  = Array{T,2};

@@ -28,7 +28,7 @@ function getL!(Lᵢ, t, clock, vars, params, grid)
   kx,ky,kz = grid.kr,grid.l,grid.m
   ky₀      = params.usr_params.ky₀
   k²xz     = params.usr_params.k2xz
-  k²     = vars.nonlinh1
+  k²       = vars.nonlinh1
   dt       = t - clock.t 
   τ        = params.usr_params.τ + dt
   

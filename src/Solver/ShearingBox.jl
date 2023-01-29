@@ -197,7 +197,8 @@ end
 function Shearing_dealias!(fh, grid)
   @assert grid.nkr == size(fh)[1]
   # kfilter = 2/3*kmax
-  kfilter = (1/2*grid.nl)^2
+  aliased_fraction =  grid.aliased_fraction
+  kfilter = (aliased_fraction*grid.nl)^2
   #@views @. fh[grid.Krsq.>=kfilter,:,:,:] = 0
 
   # Set up of CUDA threads & block

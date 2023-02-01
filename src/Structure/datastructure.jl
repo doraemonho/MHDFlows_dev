@@ -80,7 +80,7 @@ end
       params = CHDParams(cₛ, ν, nν, 1, 2, 3, 4, calcF, usr_params, to);
     elseif (S)
       shear_params = GetShearParams(Dev, grid, B; ν=ν, η=0.0);
-      params = HDParams(0.0, nν, 1, 2, 3, calcF, usr_params, to);
+      params = HDParams(0.0, nν, 1, 2, 3, calcF, shear_params, to);
     else
       params = HDParams(ν, nν, 1, 2, 3, calcF, usr_params, to);
     end

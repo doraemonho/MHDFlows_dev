@@ -22,7 +22,7 @@ using LinearAlgebra: mul!, ldiv!
 
 include("MHDSolver.jl")
 include("HDSolver.jl")
-HDUᵢUpdate! = MHDSolver.UᵢUpdate!
+HDUᵢUpdate!  =  HDSolver.UᵢUpdate!
 MHDUᵢUpdate! = MHDSolver.UᵢUpdate!
 BᵢUpdate! = MHDSolver.BᵢUpdate!
 
@@ -111,9 +111,24 @@ function MHD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
 #    exp_terms(iux) = nl(iux) + fux - zi*kxt*p + 2.d0*shear_flg*uy
 #    exp_terms(iuy) = nl(iuy) + fuy - zi*ky *p - (2.d0 - q)*shear_flg*ux  
 #    exp_terms(iby) = nl(iby) - q*shear_flg*bx
-  #@. N[:,:,:,ux_ind] +=  -(2 - q)*N[:,:,:,uy_ind]
-  #@. N[:,:,:,uy_ind] +=  +   2   *N[:,:,:,ux_ind]
-  #@. N[:,:,:,bx_ind] +=  -   q   *N[:,:,:,by_ind]
+  @. N[:,:,:,ux_ind] +=  -(2 - q)*sol[:,:,:,uy_ind]
+  @. N[:,:,:,uy_ind] +=  +   2   *sol[:,:,:,ux_ind]
+  @. N[:,:,:,bx_ind] +=  -   q   *sol[:,:,:,by_ind]
+  return nothing
+end
+
+function HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
+  U₀xh = params.usr_params.U₀xh
+  U₀yh = params.usr_params.U₀yh
+  U₀x  = params.usr_params.U₀x
+  U₀y  = params.usr_params.U₀y
+  q    = params.usr_params.q
+  
+  ux_ind,uy_ind = params.ux_ind,params.uy_ind
+#    exp_terms(iux) = nl(iux) + fux - zi*kxt*p + 2.d0*shear_flg*uy
+#    exp_terms(iuy) = nl(iuy) + fuy - zi*ky *p - (2.d0 - q)*shear_flg*ux  
+  @. N[:,:,:,ux_ind] +=  -(2 - q)*sol[:,:,:,uy_ind]
+  @. N[:,:,:,uy_ind] +=  +   2   *sol[:,:,:,ux_ind]
   return nothing
 end
 
@@ -198,7 +213,7 @@ function Shearing_dealias!(fh, grid)
   @assert grid.nkr == size(fh)[1]
   # kfilter = 2/3*kmax
   aliased_fraction =  grid.aliased_fraction
-  kfilter = (aliased_fraction*grid.nl)^2
+  kfilter = ((1-aliased_fraction)*grid.nl)^2
   #@views @. fh[grid.Krsq.>=kfilter,:,:,:] = 0
 
   # Set up of CUDA threads & block

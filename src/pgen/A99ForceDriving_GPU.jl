@@ -56,61 +56,67 @@ module A99GPU
     σ² = vars.usr_vars.σ²::T
     
     kx,ky,kz = grid.kr, grid.l, grid.m
-
+    ky       = params.usr_params.ky₀
     # "pointer"
-    uxh = view(N,:,:,:,params.ux_ind)
-    uyh = view(N,:,:,:,params.uy_ind)
-    uzh = view(N,:,:,:,params.uz_ind)
+    ∂uxh∂t = view(N,:,:,:,params.ux_ind)
+    ∂uyh∂t = view(N,:,:,:,params.uy_ind)
+    ∂uzh∂t = view(N,:,:,:,params.uz_ind)
 
     # Set up of CUDA threads & block
     threads = ( 32, 8, 1) #(9,9,9)
     blocks  = ( ceil(Int,size(N,1)/threads[1]), ceil(Int,size(N,2)/threads[2]), ceil(Int,size(N,3)/threads[3]))  
     
-    @cuda blocks = blocks threads = threads A99Force_Driving_CUDA!(uxh, uyh, uzh, kx, ky, kz, 
+    @cuda blocks = blocks threads = threads A99Force_Driving_CUDA!(∂uxh∂t, ∂uyh∂t, ∂uzh∂t, kx, ky, kz, 
                                                                    A, kf, σ², b)
 
     return nothing
   end
 
 
-  function A99Force_Driving_CUDA!(uxh,uyh,uzh,kx_,ky_,kz_,A,kf,σ²,b)
+  function A99Force_Driving_CUDA!(∂uxh∂t,∂uyh∂t,∂uzh∂t,kx_,ky_,kz_,A,kf,σ²,b)
     #define the i,j,k
     x = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     y = (blockIdx().y - 1) * blockDim().y + threadIdx().y
     z = (blockIdx().z - 1) * blockDim().z + threadIdx().z 
     
-    nx,ny,nz = size(uxh)
-    
+    nx,ny,nz = size(∂uxh∂t)
     if z ∈ (1:nz) && y ∈ (1:ny) && x ∈ (1:nx)
-      if x > 0    
-      # Reason : https://github.com/FourierFlows/FourierFlows.jl/issues/326 
-
-        kx,ky,kz  = kx_[x], ky_[y], kz_[z]
+      if x > 1    
+        # Reason : https://github.com/FourierFlows/Fou/rierFlows.jl/issues/326 
+        if size(y,1) > 1
+          kx,ky,kz  = kx_[x], ky_[x,y], kz_[z]
+        else
+          @inbounds kx,ky,kz  = kx_[x], ky_[y], kz_[z]
+        end
         k    =  √(kx^2 + ky^2 + kz^2)
+        k⊥   =  √(kx^2 + kz^2)
         k⁻¹  =  k > 0.0 ? 1/k : 0.0
-        k⊥   =  √(kx^2 + ky^2)
-        Fk   =  A*√(exp(-(k.-kf)^2/σ²)/2/π)*k⁻¹
+        Fk   =  A*√(exp(-(k-kf)^2/σ²)/2/π)*k⁻¹
         
-        e1x = k⊥ <= 0.0 ?  0.0 :  ky/k⊥
-        e1y = k⊥ <= 0.0 ?  0.0 : -kx/k⊥;
-        e2x = k⊥ <= 0.0 ?  0.0 :  kx*kz/k⊥*k⁻¹
-        e2y = k⊥ <= 0.0 ?  0.0 :  ky*kz/k⊥*k⁻¹
-        e2z = -k⊥*k⁻¹  
+        #e1y = k⊥ <= 0.0 ?  0.0 : -kx/k⊥;
+        #e2y = k⊥ <= 0.0 ?  0.0 :  ky*kz/k⊥*k⁻¹
+        #e2z = -k⊥*k⁻¹  
+        e1x = k⊥ <= 0.0 ?  0.0 :  kz/k⊥      
+        e1z = k⊥ <= 0.0 ?  0.0 : -kx/k⊥;   
 
-        eⁱᶿ = exp(randn()*2π*im)
-        Φ   = randn()*π/2
+        e2x = k⊥ <= 0.0 ?  0.0 :  kx*ky/k⊥*k⁻¹        
+        e2y = -k⊥*k⁻¹                                 
+        e2z = k⊥ <= 0.0 ?  0.0 :  kz*ky/k⊥*k⁻¹       
+
+        eⁱᶿ = exp(rand()*2π*im)
+        Φ   = rand()*π
         gi  = -tanh(b*(Φ - π/2))/tanh(b*π/2)
         gi  = abs(gi) >= 1.0 ? sign(gi)*1.0 : gi
         
-        uxh[x,y,z] += A*Fk*eⁱᶿ*gi*e1x
-        uyh[x,y,z] += A*Fk*eⁱᶿ*gi*e1y
+        @inbounds ∂uxh∂t[x,y,z] += A*Fk*eⁱᶿ*gi*e1x
+        @inbounds ∂uzh∂t[x,y,z] += A*Fk*eⁱᶿ*gi*e1z
           
-        eⁱᶿ = exp(randn()*2π*im)
+        eⁱᶿ = exp(rand()*2π*im)
         gj = √(1 - gi^2)
             
-        uxh[x,y,z] += A*Fk*eⁱᶿ*gj*e2x
-        uyh[x,y,z] += A*Fk*eⁱᶿ*gj*e2y
-        uzh[x,y,z] += A*Fk*eⁱᶿ*gj*e2z
+        @inbounds ∂uxh∂t[x,y,z] += A*Fk*eⁱᶿ*gj*e2x
+        @inbounds ∂uyh∂t[x,y,z] += A*Fk*eⁱᶿ*gj*e2y
+        @inbounds ∂uzh∂t[x,y,z] += A*Fk*eⁱᶿ*gj*e2z
       end   
     end
 

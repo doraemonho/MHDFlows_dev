@@ -163,7 +163,7 @@ function SMHDcalcN!(N, sol, t, clock, vars, params, grid)
   
   Shear.Shearing_dealias!(sol, grid);
 
-  Shear.Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
+  #Shear.Shearing_coordinate_update!(N, sol, t, clock, vars, params, grid)
   
   Shear.MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
   

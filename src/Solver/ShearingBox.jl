@@ -27,7 +27,7 @@ MHDUᵢUpdate! = MHDSolver.UᵢUpdate!
 BᵢUpdate! = MHDSolver.BᵢUpdate!
 
 function Shearing_remapping!(prob)
-  Shearing_remapping!(prob.sol, prob.clock, prob.vars, prob.params, prob.grid)
+  #Shearing_remapping!(prob.sol, prob.clock, prob.vars, prob.params, prob.grid)
   return nothing
 end
 

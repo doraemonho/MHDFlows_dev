@@ -22,6 +22,7 @@ using LinearAlgebra: mul!, ldiv!
 
 include("MHDSolver.jl")
 include("HDSolver.jl")
+include("VPSolver.jl")
 HDUᵢUpdate!  =  HDSolver.UᵢUpdate!
 MHDUᵢUpdate! = MHDSolver.UᵢUpdate!
 BᵢUpdate! = MHDSolver.BᵢUpdate!
@@ -159,7 +160,7 @@ function Field_remapping_CUDA!(tmpᵢ, fieldᵢ,
 end
 
 function MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
-    
+  DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
   #Update V + B Real Conponment
   #@timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]))
@@ -238,8 +239,61 @@ function Shearing_dealias_CUDA!(fh, Krsq, kfilter)
     if Krsq[i,j,k] >= kfilter
       fh[i,j,k] = 0.0
     end
+    # for rfft, the complex X[1] == X[N/2+1] == 0
+    # Reason : https://github.com/FourierFlows/Fou/rierFlows.jl/issues/326 
+    if i == 1 || i == nx
+      fh[i,j,k] = real(fh[i,j,k])
+    end
+
   end
   return nothing
+end
+
+function DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
+#= 
+   Possion Solver for periodic boundary condition
+   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
+   We need to find Φ and remove it using a Poission Solver 
+   Here we are using the Fourier Method to find the Φ
+   In Real Space,  
+   ∇² Φ = ∇ ⋅ B   
+   In k-Space,  
+   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
+   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
+=#  
+
+  #find Φₖ
+  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
+  k⁻² = grid.invKrsq;
+  @. vars.nonlin1  *= 0;
+  @. vars.nonlinh1 *= 0;       
+  ∑ᵢkᵢBᵢh_k² = vars.nonlinh1;
+  ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
+
+  @views bxh = sol[:, :, :, params.bx_ind];
+  @views byh = sol[:, :, :, params.by_ind];
+  @views bzh = sol[:, :, :, params.bz_ind];
+
+  @views uxh = sol[:, :, :, params.ux_ind];
+  @views uyh = sol[:, :, :, params.uy_ind];
+  @views uzh = sol[:, :, :, params.uz_ind];
+
+  @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
+  @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
+  
+  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+  @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
+  @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
+  @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
+
+  @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
+  @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
+  
+  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+  @. uxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
+  @. uyh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
+  @. uzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
+
 end
 
 end

@@ -15,8 +15,7 @@ export
   Shearing_dealias!
 
 using
-  CUDA,
-  TimerOutputs
+  CUDA
 
 using LinearAlgebra: mul!, ldiv!
 
@@ -192,21 +191,15 @@ end
 function HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Real Conponment
-  @timeit_debug params.debugTimer "FFT Update" CUDA.@sync begin
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]))
     ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]))
     ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]))
-  end
   #Update V Advection
-  @timeit_debug params.debugTimer "UᵢUpdate" CUDA.@sync begin
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="y")
     HDUᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="z")
-  end
-
-  #@timeit_debug params.debugTimer "ShearingUpdate" CUDA.@sync begin
+  
     HD_ShearingUpdate!(N, sol, t, clock, vars, params, grid)
-  #end
   return nothing
 end
 
@@ -244,7 +237,9 @@ function Shearing_dealias_CUDA!(fh, Krsq, kfilter)
     if i == 1 || i == nx
       fh[i,j,k] = real(fh[i,j,k])
     end
-
+    if i == 1 && j != 1 && k != 1
+      fh[i,j,k] *= 0.0
+    end
   end
   return nothing
 end
@@ -270,21 +265,10 @@ function DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
   ∑ᵢkᵢBᵢh_k² = vars.nonlinh1;
   ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
 
-  @views bxh = sol[:, :, :, params.bx_ind];
-  @views byh = sol[:, :, :, params.by_ind];
-  @views bzh = sol[:, :, :, params.bz_ind];
 
   @views uxh = sol[:, :, :, params.ux_ind];
   @views uyh = sol[:, :, :, params.uy_ind];
   @views uzh = sol[:, :, :, params.uz_ind];
-
-  @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
-  @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
-  
-  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
-  @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
-  @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
-  @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
 
   @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
   @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
@@ -294,6 +278,20 @@ function DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
   @. uyh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
   @. uzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
 
+  if size(sol,4) > 4
+    @views bxh = sol[:, :, :, params.bx_ind];
+    @views byh = sol[:, :, :, params.by_ind];
+    @views bzh = sol[:, :, :, params.bz_ind];
+ 
+    @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
+    @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
+   
+    # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+    @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
+    @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
+    @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
+  end
+  return nothing
 end
 
 end

@@ -189,7 +189,7 @@ function MHD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
 end
 
 function HD_ShearingAdvection!(N, sol, t, clock, vars, params, grid)
-
+  DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
   #Update V + B Real Conponment
     ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]))
     ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]))

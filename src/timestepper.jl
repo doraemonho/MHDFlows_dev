@@ -34,10 +34,10 @@ function getL!(Lᵢ, t, clock, vars, params, grid)
   
   @. ky   = ky₀  + q*τ*kx
   @. k²xz = kx^2 + kz^2
-  @. Lᵢ   = -ν*(k²xz*ky + ky^3/3)/(q*kx)
-  @. k²   = k²xz + ky₀^2
-  @. @views Lᵢ[1,:,:] = -k²[1,:,:]*ν*τ
-#  @. @views Lᵢ = -Krsq*ν*τ
+#  @. Lᵢ   = -ν*(k²xz*ky + ky^3/3)/(q*kx)
+#  @. k²   = k²xz + ky₀^2
+#  @. @views Lᵢ[1,:,:] = -k²[1,:,:]*ν*τ
+  @. @views Lᵢ = -Krsq*ν*τ
   return nothing
 end
 

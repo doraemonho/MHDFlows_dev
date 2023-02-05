@@ -110,11 +110,11 @@ function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::Abstract
                  stepperkwargs...) where T
 
   clock = FourierFlows.Clock{T}(dt, 0, 0)
-  if SFlag
-    timestepper = eSSPIFRK3TimeStepper(eqn, dev)
-  else
+  #if SFlag
+  #  timestepper = eSSPIFRK3TimeStepper(eqn, dev)
+  #else
     timestepper = FourierFlows.TimeStepper(stepper, eqn, dt, dev);
-  end
+  #end
   sol = zeros(dev, eqn.T, eqn.dims);
 
   flag = Flag(BFlag, VPFlag, CFlag, SFlag);

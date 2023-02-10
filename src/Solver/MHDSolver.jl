@@ -16,8 +16,10 @@ using
 using LinearAlgebra: mul!, ldiv!
 include("VPSolver.jl")
 
-# δ function
-δ(a::Int,b::Int) = ( a == b ? 1 : 0 );
+# δ notation
+δ(a::Int,b::Int) = ( a == b ? 1 : 0 )
+# ϵ notation
+ϵ(i::Int,j::Int,k::Int) = (i - j)*(j - k)*(k - i)/2
 
 # checking function of VP method
 VP_is_turned_on(params) = hasproperty(params,:U₀x);
@@ -172,6 +174,214 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     
     return nothing
 
+end
+
+# B function for EMHD system
+# For E-MHD system, the induction will be changed into
+#  ∂B/∂t = -dᵢ * ∇× [ (∇× B) × B ] + η ∇²B
+# In this function, we will implement the equation and assume dᵢ = 1
+function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+
+  # To Update B_i, we have to first break down the equation :
+  # ∂B/∂t  = - ∇× [ (∇× B) × B ] + η ∇²B
+  # Let A = (∇× B). By using vector calculus identities, we have
+  # ∂B/∂t  = - [ (∇ ⋅ B + B ⋅ ∇)A - (∇ ⋅ A + A ⋅ ∇)B ]  + η ∇²B
+  # Using ∇ ⋅ B  = 0 and vector calculus identities ∇⋅(∇× B) = 0, we finally get the expression
+  # ∂B/∂t  = - [(B ⋅ ∇)A - (A ⋅ ∇)B ]  + η ∇²B =  (A ⋅ ∇)B - (B ⋅ ∇)A  + η ∇²B
+  # For any direction i, we will have the following expression in k-space
+  # 𝔉(∂Bᵢ/∂t)  = 𝔉[(Aⱼ∂ⱼ)Bᵢ - Bⱼ∂ⱼAᵢ] -  k²𝔉(B)
+  # To compute the first term in RHS, we break it into three step
+  # 1. compute real space term ∂ⱼBᵢ using spectral method
+  # 2. compute Aⱼ∂ⱼBᵢ using pseudo spectral method
+  # 3. add the answer to 𝔉(∂Bᵢ/∂t) 
+  #
+
+  # declare the var u_i, b_i for computation
+  if direction == "x"
+    a   = 1
+    kₐ  = grid.kr
+    Aᵢ  = vars.∇XBᵢ
+    uᵢ  = vars.ux
+    bᵢ  = vars.bx 
+    bᵢh = @view sol[:,:,:,params.bx_ind]
+    ∂Bᵢh∂t = @view N[:,:,:,params.bx_ind]
+
+  elseif direction == "y"
+    a   = 2
+    kₐ  = grid.l
+    Aᵢ  = vars.∇XBⱼ
+    uᵢ  = vars.uy
+    bᵢ  = vars.by 
+    bᵢh = @view sol[:,:,:,params.by_ind]
+    ∂Bᵢh∂t = @view N[:,:,:,params.by_ind]
+
+  elseif direction == "z"
+    a   = 3
+    kₐ  = grid.m
+    Aᵢ  = vars.∇XBₖ
+    uᵢ  = vars.uz
+    bᵢ  = vars.bz 
+    bᵢh = @view sol[:,:,:,params.bz_ind]
+    ∂Bᵢh∂t = @view N[:,:,:,params.bz_ind]
+  else
+
+    @warn "Warning : Unknown direction is declerad"
+
+  end
+
+  A₁  = vars.∇XBᵢ
+  A₂  = vars.∇XBⱼ
+  A₃  = vars.∇XBₖ
+
+  # define the sketch array
+  ∂ⱼAᵢ  = ∂ⱼBᵢ  = vars.nonlin1
+  Bⱼ∂ⱼAᵢ= Aⱼ∂ⱼBᵢ= vars.nonlin1
+  Aᵢh   = Bᵢh   = vars.nonlinh1
+  ∂ⱼAᵢh = ∂ⱼBᵢh = vars.nonlinh1
+  Bⱼ∂ⱼAᵢh = Aⱼ∂ⱼBᵢh = vars.nonlinh1
+
+  @. ∂Bᵢh∂t*= 0;
+  for (bⱼ,Aⱼ,kⱼ) ∈ zip((vars.bx,vars.by,vars.bz),(A₁,A₂,A₃),(grid.kr,grid.l,grid.m))
+    
+    # first step
+    mul!(Aᵢh, grid.rfftplan, Aᵢ)
+    @. ∂ⱼAᵢh = im*kⱼ*Aᵢh
+    ldiv!(∂ⱼAᵢ, grid.rfftplan, deepcopy(∂ⱼAᵢh))
+    # second step
+    @. Bⱼ∂ⱼAᵢ = bⱼ*∂ⱼAᵢ
+    mul!(Bⱼ∂ⱼAᵢh, grid.rfftplan, Bⱼ∂ⱼAᵢ)
+    # final step
+    @. ∂Bᵢh∂t += Bⱼ∂ⱼAᵢh
+
+    # first step
+    @. ∂ⱼBᵢh = im*kⱼ*bᵢh
+    ldiv!(∂ⱼBᵢ, grid.rfftplan, deepcopy(∂ⱼBᵢh))
+    # second step
+    @. Aⱼ∂ⱼBᵢ = Aⱼ*∂ⱼBᵢ
+    mul!(Aⱼ∂ⱼBᵢh, grid.rfftplan, Aⱼ∂ⱼBᵢ)
+    # final step
+    @. ∂Bᵢh∂t -= Aⱼ∂ⱼBᵢh
+
+  end
+
+  # Updating the solid domain if VP flag is ON
+  if VP_is_turned_on(params) 
+    VPSolver.VP_BᵢUpdate!(∂Bᵢh∂t, kₐ.*k⁻², a, clock, vars, params, grid)
+  end
+
+  #Compute the diffusion term  - ηk^2 B_i
+  @. ∂Bᵢh∂t += -grid.Krsq*params.η*bᵢh
+
+  # hyperdiffusion term
+  if params.nη > 1
+    @. ∂Bᵢh∂t += -grid.Krsq^params.nη*params.η*bᵢh
+  end
+    
+  return nothing
+
+end
+
+# Compute the ∇XB term
+function Get∇XB!(sol, vars, params, grid)
+
+  # ∇XB = im*( k × B )ₖ = ϵ_ijk kᵢ Bⱼ
+
+  # define the variables
+  k₁,k₂,k₃ = grid.kr,grid.l,grid.m;
+  B₁h = @view sol[:,:,:,params.bx_ind]
+  B₂h = @view sol[:,:,:,params.by_ind]
+  B₃h = @view sol[:,:,:,params.bz_ind]
+  A₁  = vars.∇XBᵢ
+  A₂  = vars.∇XBⱼ
+  A₃  = vars.∇XBₖ
+
+  # define the sketch array
+  #=∇XBₖh = vars.nonlinh1
+  for (∇XBₖ ,k) ∈ zip((A₁,A₂,A₃),(1,2,3))
+    @. ∇XBₖh*=0
+    for (Bⱼh,j)  ∈ zip((B₁h,B₂h,B₃h),(1,2,3))
+      for (kᵢ,i)  ∈ zip((k₁,k₂,k₃),(1,2,3))
+        if ϵ(i,j,k) != 0
+          @. ∇XBₖh += im*ϵ(i,j,k)*kᵢ*Bⱼh
+        end
+      end
+    end
+    ldiv!(∇XBₖ, grid.rfftplan, deepcopy( ∇XBₖh))
+  end=#
+  CBᵢh = vars.nonlinh1
+  @. CBᵢh = im*(k₂*B₃h - k₃*B₂h);
+  ldiv!(A₁, grid.rfftplan, CBᵢh);  
+
+  @. CBᵢh = im*(k₃*B₁h - k₁*B₃h);
+  ldiv!(A₂, grid.rfftplan, CBᵢh);  
+
+  @. CBᵢh = im*(k₁*B₂h - k₂*B₁h);
+  ldiv!(A₃, grid.rfftplan, CBᵢh);  
+
+  return nothing
+end
+
+function DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
+#= 
+   Possion Solver for periodic boundary condition
+   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
+   We need to find Φ and remove it using a Poission Solver 
+   Here we are using the Fourier Method to find the Φ
+   In Real Space,  
+   ∇² Φ = ∇ ⋅ B   
+   In k-Space,  
+   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
+   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
+=#  
+
+  #find Φₖ
+  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
+  k⁻² = grid.invKrsq;
+  @. vars.nonlin1  *= 0;
+  @. vars.nonlinh1 *= 0;       
+  ∑ᵢkᵢBᵢh_k² = vars.nonlinh1;
+  ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
+
+  # it is N not sol
+  @views bxh = N[:, :, :, params.bx_ind];
+  @views byh = N[:, :, :, params.by_ind];
+  @views bzh = N[:, :, :, params.bz_ind];
+
+  @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
+  @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
+ 
+  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
+  @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
+  @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
+  @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
+
+  return nothing
+end
+
+function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+
+  #Update V + B Real Conponment
+  ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]))
+  ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]))
+  ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]))
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
+  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
+
+  #Update V Advection
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
+
+  #Update B Advection
+  Get∇XB!(sol, vars, params, grid)
+  EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+  EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
+  EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
+  DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
+
+  
+  return nothing
 end
 
 function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)

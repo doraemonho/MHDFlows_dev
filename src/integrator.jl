@@ -83,7 +83,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
   # Clean the divgence of b if VP method is turned on
   if (prob.flag.vp == true)
-    #MHDSolver_VP.DivVCorrection!(prob);
+    VPSolver.DivVCorrection!(prob);
     prob.flag.b == true ? VPSolver.DivBCorrection!(prob) : nothing;
   end
 

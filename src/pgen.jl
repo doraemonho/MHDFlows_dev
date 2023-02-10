@@ -75,6 +75,7 @@ function Problem(dev::Device;
                 nη = 0,
    # Declare if turn on magnetic field, VP method, Dye module
          B_field = false,
+            EMHD = false,
  Compressibility = false,
            Shear = false,
 	     VP_method = false,
@@ -103,7 +104,7 @@ function Problem(dev::Device;
   end
 
   # Declare vars
-  vars = SetVars(dev, grid, usr_vars; B = B_field, VP = VP_method, C = Compressibility);
+  vars = SetVars(dev, grid, usr_vars; B = B_field, E = EMHD, VP = VP_method, C = Compressibility);
 
   # Delare params
   params = SetParams(dev, grid, calcF, usr_params; 
@@ -111,30 +112,33 @@ function Problem(dev::Device;
              cₛ = cₛ, ν = ν, η = η, nν = nν);
 
   # Declare Fiuld Equations that will be iterating 
-  equation = Equation_with_forcing(dev, grid; B = B_field, C = Compressibility, S=Shear);
+  equation = Equation_with_forcing(dev, grid; B = B_field, E = EMHD, C = Compressibility, S=Shear);
 
   # Return the Problem
   return MHDFLowsProblem(equation, stepper, dt, grid, vars, params, dev;
-          CFlag = Compressibility, BFlag = B_field, SFlag = Shear, VPFlag = VP_method, DyeFlag = Dye_Module, 
+          CFlag = Compressibility, BFlag = B_field, EFlag = EMHD, SFlag = Shear, 
+          VPFlag = VP_method, DyeFlag = Dye_Module, 
           usr_func = usr_func)
 
 end
 
-function Equation_with_forcing(dev, grid; B = false, C = false, S=false)
+function Equation_with_forcing(dev, grid; B = false, E = false, C = false, S=false)
   if C 
-    Nₗ = ifelse(B,7,4);
+    Nₗ = ifelse(B,7,4)
   else
-    Nₗ = ifelse(B,6,3);
+    Nₗ = ifelse(B,6,3)
   end
   if C
-    calcN! = B ? CMHDcalcN! : CHDcalcN!;
+    calcN! = B ? CMHDcalcN! : CHDcalcN!
   elseif S
-    calcN! = B ? SMHDcalcN! : SHDcalcN!;
+    calcN! = B ? SMHDcalcN! : SHDcalcN!
+  elseif E
+    calcN! = EMHDcalcN!
   else
-    calcN! = B ? MHDcalcN! : HDcalcN!;
+    calcN! = B ? MHDcalcN! : HDcalcN!
   end
   
-  return Setup_Equation(calcN!, grid; Nl =Nₗ);
+  return Setup_Equation(calcN!, grid; Nl =Nₗ)
 end
 
 
@@ -149,12 +153,23 @@ function MHDcalcN!(N, sol, t, clock, vars, params, grid)
   return nothing
 end
 
-function HDcalcN!(N, sol, t, clock, vars, params, grid)
+function EMHDcalcN!(N, sol, t, clock, vars, params, grid)
+  
   dealias!(sol, grid)
   
-  HDSolver.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+  MHDSolver.EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   addforcing!(N, sol, t, clock, vars, params, grid)
+  
+  return nothing
+end
+
+function HDcalcN!(N, sol, t, clock, vars, params, grid)
+  dealias!(sol, grid)
+
+  addforcing!(N, sol, t, clock, vars, params, grid)
+  
+  HDSolver.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   return nothing
 end

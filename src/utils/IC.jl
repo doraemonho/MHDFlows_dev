@@ -56,6 +56,14 @@ function SetUpProblemIC!(prob;  ρ = [],
       mul!(sol₀ , grid.rfftplan, vars.ρ);
     end
   end
+  if prob.dye.dyeflag
+    if ρ ==[]
+      warning("User declare the dye but no dye is set")
+    else
+      copyto!(prob.dye.ρ, ρ);
+      mul!(prob.dye.tmp.sol₀, grid.rfftplan, prob.dye.ρ);
+    end
+  end
 
   # Copy the data to both output and solution array
   for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],

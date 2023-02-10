@@ -95,9 +95,9 @@ end
 function HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update V + B Real Conponment
-  ldiv!(vars.ux, grid.rfftplan, @view sol[:, :, :, params.ux_ind]);
-  ldiv!(vars.uy, grid.rfftplan, @view sol[:, :, :, params.uy_ind]);
-  ldiv!(vars.uz, grid.rfftplan, @view sol[:, :, :, params.uz_ind]);
+  ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]))
+  ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]))
+  ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]))
   
   #Update V Advection
   UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")

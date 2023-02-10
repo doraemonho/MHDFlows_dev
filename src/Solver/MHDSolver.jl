@@ -251,7 +251,7 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     @. Bⱼ∂ⱼAᵢ = bⱼ*∂ⱼAᵢ
     mul!(Bⱼ∂ⱼAᵢh, grid.rfftplan, Bⱼ∂ⱼAᵢ)
     # final step
-    @. ∂Bᵢh∂t += Bⱼ∂ⱼAᵢh
+    @. ∂Bᵢh∂t -= Bⱼ∂ⱼAᵢh
 
     # first step
     @. ∂ⱼBᵢh = im*kⱼ*bᵢh
@@ -260,7 +260,7 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     @. Aⱼ∂ⱼBᵢ = Aⱼ*∂ⱼBᵢ
     mul!(Aⱼ∂ⱼBᵢh, grid.rfftplan, Aⱼ∂ⱼBᵢ)
     # final step
-    @. ∂Bᵢh∂t -= Aⱼ∂ⱼBᵢh
+    @. ∂Bᵢh∂t += Aⱼ∂ⱼBᵢh
 
   end
 
@@ -380,7 +380,7 @@ function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
   DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
 
-  
+
   return nothing
 end
 

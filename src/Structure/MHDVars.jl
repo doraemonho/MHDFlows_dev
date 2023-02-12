@@ -24,19 +24,12 @@ struct MVars{Aphys, Atrans, usr_var} <: MHDVars
 end
 
 struct EMVars{Aphys, Atrans, usr_var} <: MHDVars
-    "x-component of velocity"
-        ux :: Aphys
-    "y-component of velocity"
-        uy :: Aphys
-    "z-component of velocity"
-        uz :: Aphys
     "x-component of B-field"
         bx :: Aphys
     "y-component of B-field"
         by :: Aphys
     "z-component of B-field"
         bz :: Aphys
-
     "x-component of Curl B-field"
         ∇XBᵢ :: Aphys
     "y-component of Curl B-field"

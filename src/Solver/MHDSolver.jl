@@ -201,7 +201,6 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     a   = 1
     kₐ  = grid.kr
     Aᵢ  = vars.∇XBᵢ
-    uᵢ  = vars.ux
     bᵢ  = vars.bx 
     bᵢh = @view sol[:,:,:,params.bx_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.bx_ind]
@@ -210,7 +209,6 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     a   = 2
     kₐ  = grid.l
     Aᵢ  = vars.∇XBⱼ
-    uᵢ  = vars.uy
     bᵢ  = vars.by 
     bᵢh = @view sol[:,:,:,params.by_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.by_ind]
@@ -219,7 +217,6 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     a   = 3
     kₐ  = grid.m
     Aᵢ  = vars.∇XBₖ
-    uᵢ  = vars.uz
     bᵢ  = vars.bz 
     bᵢh = @view sol[:,:,:,params.bz_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.bz_ind]
@@ -244,20 +241,24 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   for (bⱼ,Aⱼ,kⱼ) ∈ zip((vars.bx,vars.by,vars.bz),(A₁,A₂,A₃),(grid.kr,grid.l,grid.m))
     
     # first step
+    @. Aᵢh = 0
     mul!(Aᵢh, grid.rfftplan, Aᵢ)
     @. ∂ⱼAᵢh = im*kⱼ*Aᵢh
     ldiv!(∂ⱼAᵢ, grid.rfftplan, deepcopy(∂ⱼAᵢh))
     # second step
     @. Bⱼ∂ⱼAᵢ = bⱼ*∂ⱼAᵢ
+    @. Bⱼ∂ⱼAᵢh = 0
     mul!(Bⱼ∂ⱼAᵢh, grid.rfftplan, Bⱼ∂ⱼAᵢ)
     # final step
     @. ∂Bᵢh∂t -= Bⱼ∂ⱼAᵢh
 
     # first step
+    @. ∂ⱼBᵢ = 0
     @. ∂ⱼBᵢh = im*kⱼ*bᵢh
     ldiv!(∂ⱼBᵢ, grid.rfftplan, deepcopy(∂ⱼBᵢh))
     # second step
     @. Aⱼ∂ⱼBᵢ = Aⱼ*∂ⱼBᵢ
+    @. Aⱼ∂ⱼBᵢh = 0
     mul!(Aⱼ∂ⱼBᵢh, grid.rfftplan, Aⱼ∂ⱼBᵢ)
     # final step
     @. ∂Bᵢh∂t += Aⱼ∂ⱼBᵢh
@@ -284,7 +285,7 @@ end
 # Compute the ∇XB term
 function Get∇XB!(sol, vars, params, grid)
 
-  # ∇XB = im*( k × B )ₖ = ϵ_ijk kᵢ Bⱼ
+  # ∇XB = im*( k × B )ₖ = im*ϵ_ijk kᵢ Bⱼ
 
   # define the variables
   k₁,k₂,k₃ = grid.kr,grid.l,grid.m;
@@ -308,6 +309,7 @@ function Get∇XB!(sol, vars, params, grid)
     end
     ldiv!(∇XBₖ, grid.rfftplan, deepcopy( ∇XBₖh))
   end=#
+
   CBᵢh = vars.nonlinh1
   @. CBᵢh = im*(k₂*B₃h - k₃*B₂h);
   ldiv!(A₁, grid.rfftplan, CBᵢh);  
@@ -343,9 +345,9 @@ function DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
   ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
 
   # it is N not sol
-  @views bxh = N[:, :, :, params.bx_ind];
-  @views byh = N[:, :, :, params.by_ind];
-  @views bzh = N[:, :, :, params.bz_ind];
+  @views bxh = sol[:, :, :, params.bx_ind];
+  @views byh = sol[:, :, :, params.by_ind];
+  @views bzh = sol[:, :, :, params.bz_ind];
 
   @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
   @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
@@ -360,26 +362,17 @@ end
 
 function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
-  #Update V + B Real Conponment
-  ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]))
-  ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]))
-  ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]))
-  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
-  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
-  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
-
-  #Update V Advection
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
-  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
-
   #Update B Advection
-  Get∇XB!(sol, vars, params, grid)
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
   DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
 
+  #Update B Real Conponment
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
+  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
+  Get∇XB!(sol, vars, params, grid)
 
   return nothing
 end

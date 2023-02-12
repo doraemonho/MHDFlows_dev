@@ -15,10 +15,10 @@ end
 function SetEMHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz ∇XBx ∇XBy ∇XBz nonlin1
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) bx  by bz ∇XBx ∇XBy ∇XBz nonlin1
   @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm)  nonlinh1
   
-  return EMVars( ux,  uy,  uz,  bx,  by,  bz,
+  return EMVars(bx,  by,  bz,
                 ∇XBx, ∇XBy, ∇XBz,
                 nonlin1, nonlinh1, usr_vars);
 end
@@ -84,6 +84,8 @@ end
     elseif (S)
       shear_params = GetShearParams(Dev, grid, B; ν=ν, η=η);
       params = MHDParams(0.0, 0.0, nν, nη, 1, 2, 3, 4, 5, 6, calcF, shear_params, to);
+    elseif (E)
+      params = EMHDParams(η, nη, 1, 2, 3, calcF, usr_params, to);
     else
       params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params, to);
     end

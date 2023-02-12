@@ -70,6 +70,29 @@ struct MHDParams{usr_param,to} <: AbstractParams
 
 end
 
+struct EMHDParams{usr_param,to} <: AbstractParams
+    
+  "small-scale (hyper)-viscosity coefficient for b"
+    η :: Number
+
+  "(hyper)-resisivity order, `nη```≥ 1``"
+    nη :: Int
+    
+  "Array Indexing for B-field"
+    bx_ind :: Int
+    by_ind :: Int
+    bz_ind :: Int
+  "function that calculates the Fourier transform of the forcing, ``F̂``"
+    calcF! :: Function 
+  
+  "User defined params"
+ usr_params :: usr_param
+
+ "Debug timer"
+  debugTimer :: to
+
+end
+
 struct CMHDParams{usr_param,to} <: AbstractParams
   "speed of sound"
         cₛ :: Number

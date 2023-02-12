@@ -108,7 +108,7 @@ function Problem(dev::Device;
 
   # Delare params
   params = SetParams(dev, grid, calcF, usr_params; 
-             B = B_field, VP = VP_method, C= Compressibility, S=Shear,
+             B = B_field, E = EMHD, VP = VP_method, C= Compressibility, S=Shear,
              cₛ = cₛ, ν = ν, η = η, nν = nν);
 
   # Declare Fiuld Equations that will be iterating 
@@ -126,7 +126,11 @@ function Equation_with_forcing(dev, grid; B = false, E = false, C = false, S=fal
   if C 
     Nₗ = ifelse(B,7,4)
   else
-    Nₗ = ifelse(B,6,3)
+    if E
+      Nₗ = 3
+    else
+      Nₗ = ifelse(B,6,3)
+    end
   end
   if C
     calcN! = B ? CMHDcalcN! : CHDcalcN!

@@ -59,8 +59,8 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
   # Declare the timescale for diffusion
   if prob.flag.b
-    vi = maximum([prob.params.ν,prob.params.η]);
-    nv = maximum([prob.params.nν,prob.params.nη]);
+    vi = prob.flag.e ?  prob.params.η : maximum([prob.params.ν,prob.params.η]);
+    nv = prob.flag.e ? prob.params.nη : maximum([prob.params.nν,prob.params.nη]);
   else
     vi = prob.params.ν;
     nv = prob.params.nν
@@ -69,7 +69,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   dy = prob.grid.Ly/prob.grid.ny;
   dz = prob.grid.Lz/prob.grid.nz;
   dl = minimum([dx,dy,dz]);
-  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(prob.params.nν)/vi,CFL_Coef*dl^2/vi);
+  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(nv)/vi,CFL_Coef*dl^2/vi);
 
   # Declare the iterator paramters
   t_next_save = prob.clock.t + dump_dt;
@@ -157,15 +157,23 @@ end
 
 function getCFL!(prob, t_diff; Coef = 0.3);
   #Solving the dt of CFL condition using dt = Coef*dx/v
-  ux,uy,uz = prob.vars.ux, prob.vars.uy,prob.vars.uz;
   square_maximum(A) =  mapreduce(x->x*x,max,A);
+  if prob.flag.e
+    # For EMHD, v = ∇×B
+    ux,uy,uz = prob.vars.∇XBᵢ , prob.vars.∇XBⱼ, prob.vars.∇XBₖ;
+    v2xmax = square_maximum(ux);
+    v2ymax = square_maximum(uy);
+    v2zmax = square_maximum(uz);
+    vmax = sqrt(maximum((v2xmax,v2ymax,v2zmax)));
+  else
+    #Maxmium velocity 
+    ux,uy,uz = prob.vars.ux, prob.vars.uy,prob.vars.uz;
+    v2xmax = square_maximum(ux);
+    v2ymax = square_maximum(uy);
+    v2zmax = square_maximum(uz);
+    vmax = sqrt(maximum((v2xmax,v2ymax,v2zmax)));
+  end
 
-  #Maxmium velocity 
-  v2xmax = square_maximum(ux);
-  v2ymax = square_maximum(uy);
-  v2zmax = square_maximum(uz);
-  vmax = sqrt(maximum((v2xmax,v2ymax,v2zmax)));
-  
   if prob.flag.b
     #Maxmium Alfvenic velocity 
     bx,by,bz = prob.vars.bx, prob.vars.by,prob.vars.bz;
@@ -198,14 +206,17 @@ end
 
 function Restart!(prob,file_path_and_name)
   f = h5open(file_path_and_name,"r");
-  ux = read(f,"i_velocity");
-  uy = read(f,"j_velocity");
-  uz = read(f,"k_velocity");
-  
-  #Update V Conponment
-  Move_Data_to_Prob!(ux, prob.vars.ux, view(prob.sol,:, :, :, prob.params.ux_ind),prob.grid)
-  Move_Data_to_Prob!(uy, prob.vars.uy, view(prob.sol,:, :, :, prob.params.uy_ind),prob.grid)
-  Move_Data_to_Prob!(uz, prob.vars.uz, view(prob.sol,:, :, :, prob.params.uz_ind),prob.grid)
+
+  if !prob.flag.e
+    ux = read(f,"i_velocity");
+    uy = read(f,"j_velocity");
+    uz = read(f,"k_velocity");
+    
+    #Update V Conponment
+    Move_Data_to_Prob!(ux, prob.vars.ux, view(prob.sol,:, :, :, prob.params.ux_ind),prob.grid)
+    Move_Data_to_Prob!(uy, prob.vars.uy, view(prob.sol,:, :, :, prob.params.uy_ind),prob.grid)
+    Move_Data_to_Prob!(uz, prob.vars.uz, view(prob.sol,:, :, :, prob.params.uz_ind),prob.grid)
+  end
 
   #Update B Conponment
   if prob.flag.b == true

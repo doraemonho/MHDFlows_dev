@@ -40,7 +40,10 @@ include("Solver/MHDSolver_Compessible.jl");
 # integrator related
 include("DiagnosticWrapper.jl")
 include("integrator.jl")
-include("timestepper.jl")
+
+# timestepper
+include("timestepper/LSRK3.jl")
+
 #utils
 include("utils/utils.jl");
 include("utils/VectorCalculus.jl")

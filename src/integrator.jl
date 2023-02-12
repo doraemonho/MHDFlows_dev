@@ -159,7 +159,7 @@ function getCFL!(prob, t_diff; Coef = 0.3);
   #Solving the dt of CFL condition using dt = Coef*dx/v
   square_maximum(A) =  mapreduce(x->x*x,max,A);
   if prob.flag.e
-    # For EMHD, v = ∇×B
+    # Maxmium velocity, For EMHD, v = ∇×B
     ux,uy,uz = prob.vars.∇XBᵢ , prob.vars.∇XBⱼ, prob.vars.∇XBₖ;
     v2xmax = square_maximum(ux);
     v2ymax = square_maximum(uy);
@@ -191,7 +191,8 @@ function getCFL!(prob, t_diff; Coef = 0.3);
   dx = prob.grid.Lx/prob.grid.nx;
   dy = prob.grid.Ly/prob.grid.ny;
   dz = prob.grid.Lz/prob.grid.nz;
-  dl = minimum([dx,dy,dz]);
+  # EMHD have two non-linear term, which makes dt ∝ Δx² in stead of Δx
+  dl =  prob.flag.e ? minimum([dx,dy,dz])^2 : minimum([dx,dy,dz])
   dt = minimum([Coef*dl/vmax,t_diff]);
   prob.clock.dt = dt;
 end

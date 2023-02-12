@@ -121,8 +121,9 @@ function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::Abstract
                  stepperkwargs...) where T
 
   clock = FourierFlows.Clock{T}(dt, 0, 0)
-  #if SFlag
-  #  timestepper = eSSPIFRK3TimeStepper(eqn, dev)
+  #if EFlag
+  #  timestepper = eSSPIFRK3TimeStepper(eqn, dev) #For SFlag
+  #  timestepper = LSRK3TimeStepper(eqn, dev) #For SFlag
   #else
     timestepper = FourierFlows.TimeStepper(stepper, eqn, dt, dev);
   #end

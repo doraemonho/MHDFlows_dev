@@ -363,16 +363,16 @@ end
 function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update B Advection
+  Get∇XB!(sol, vars, params, grid)
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
-  DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
 
   #Update B Real Conponment
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
   ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
   ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
-  Get∇XB!(sol, vars, params, grid)
+  DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
 
   return nothing
 end

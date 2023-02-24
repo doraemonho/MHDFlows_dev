@@ -17,7 +17,7 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 PyPlot =  "d330b81b-6aea-500a-939a-2ce795aea3ee"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
-TimeOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 
 [compat]

@@ -252,22 +252,26 @@ function Restart!(prob,file_path_and_name)
   # Update time 
   prob.clock.t = read(f,"time");
   close(f)
+
+  return nothing
 end
 
 function savefile(prob,file_number;file_path_and_name="")
   space_0 = ""
   for i = 1:4-length(string(file_number));space_0*="0";end
   fw = h5open(file_path_and_name*"_t_"*space_0*string(file_number)*".h5","w")
-  write(fw, "i_velocity",  Array(prob.vars.ux));
-  write(fw, "j_velocity",  Array(prob.vars.uy));
-  write(fw, "k_velocity",  Array(prob.vars.uz));
+  if !prob.flag.e
+    write(fw, "i_velocity",  Array(prob.vars.ux));
+    write(fw, "j_velocity",  Array(prob.vars.uy));
+    write(fw, "k_velocity",  Array(prob.vars.uz));
+  end
   if (prob.dye.dyeflag == true)
-      write(fw, "dye_density",  Array(prob.dye.ρ));
+    write(fw, "dye_density",  Array(prob.dye.ρ));
   end
   if (prob.flag.b == true)
-      write(fw, "i_mag_field", Array(prob.vars.bx));
-      write(fw, "j_mag_field", Array(prob.vars.by));
-      write(fw, "k_mag_field", Array(prob.vars.bz));
+    write(fw, "i_mag_field", Array(prob.vars.bx));
+    write(fw, "j_mag_field", Array(prob.vars.by));
+    write(fw, "k_mag_field", Array(prob.vars.bz));
   end
 
   if (prob.flag.c == true)
@@ -280,4 +284,5 @@ function savefile(prob,file_number;file_path_and_name="")
 
   write(fw, "time", prob.clock.t);
   close(fw) 
+  return nothing
 end

@@ -296,7 +296,7 @@ function Get∇XB!(sol, vars, params, grid)
   A₂  = vars.∇XBⱼ
   A₃  = vars.∇XBₖ
 
-  # define the sketch array
+  # Way 1  of appling Curl
   #=∇XBₖh = vars.nonlinh1
   for (∇XBₖ ,k) ∈ zip((A₁,A₂,A₃),(1,2,3))
     @. ∇XBₖh*=0
@@ -310,15 +310,16 @@ function Get∇XB!(sol, vars, params, grid)
     ldiv!(∇XBₖ, grid.rfftplan, deepcopy( ∇XBₖh))
   end=#
 
+  # Way 2  of appling Curl
   CBᵢh = vars.nonlinh1
-  @. CBᵢh = im*(k₂*B₃h - k₃*B₂h);
-  ldiv!(A₁, grid.rfftplan, CBᵢh);  
+  @. CBᵢh = im*(k₂*B₃h - k₃*B₂h)
+  ldiv!(A₁, grid.rfftplan, CBᵢh)  
 
-  @. CBᵢh = im*(k₃*B₁h - k₁*B₃h);
-  ldiv!(A₂, grid.rfftplan, CBᵢh);  
+  @. CBᵢh = im*(k₃*B₁h - k₁*B₃h)
+  ldiv!(A₂, grid.rfftplan, CBᵢh)  
 
-  @. CBᵢh = im*(k₁*B₂h - k₂*B₁h);
-  ldiv!(A₃, grid.rfftplan, CBᵢh);  
+  @. CBᵢh = im*(k₁*B₂h - k₂*B₁h)
+  ldiv!(A₃, grid.rfftplan, CBᵢh)  
 
   return nothing
 end

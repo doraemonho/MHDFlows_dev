@@ -21,10 +21,10 @@ TimeOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 
 [compat]
-CUDA = "^1, ^2.4.2, 3.0.0 - 3.6.4, ^3.7.1"
+CUDA = "1, 2.4.2, 3.0.0 - 3.6.4, 3.7.1, 4"
 DocStringExtensions = "^0.8"
 FFTW = "^1"
-FourierFlows = "^0.10.2"
+FourierFlows = "^0.10.3"
 Reexport = "^0.2, ^1"
 julia = "^1.5.3"
 HDF5 = "^0.14.3"

@@ -218,7 +218,7 @@ Warning : For Periodic Maps Only
 function spectralline(A::Array{T,2};Lx=2π) where T
   nx,ny = size(A);
   Ak = zeros(Complex{T},div(nx,2)+1,ny);
-  grid = TwoDGrid(CPU(),nx,Lx;T=T);
+  grid = TwoDGrid(CPU();nx,Lx,T=T);
   mul!(Ak,grid.rfftplan,A);
   kk    = @. √(grid.Krsq);
   krmax = round(Int,maximum(kk)+1);
@@ -237,7 +237,7 @@ end
 function spectralline(A::Array{T,3};Lx=2π) where T
   nx,ny,nz = size(A);
   Ak = zeros(Complex{T},div(nx,2)+1,ny,nz);
-  grid = GetSimpleThreeDGrid(nx,Lx;T=T);
+  grid = GetSimpleThreeDGrid(nx,Lx,ny,Lx,nz,Lx;T=T);
   k²,rfftplan = grid.Krsq,grid.rfftplan;
   mul!(Ak,rfftplan,A);
   kk    = @. √(k²::Array{T,3});

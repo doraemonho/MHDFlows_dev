@@ -265,21 +265,8 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   end
 
-  # Updating the solid domain if VP flag is ON
-  if VP_is_turned_on(params) 
-    VPSolver.VP_BᵢUpdate!(∂Bᵢh∂t, kₐ.*k⁻², a, clock, vars, params, grid)
-  end
-
-  #Compute the diffusion term  - ηk^2 B_i
-  @. ∂Bᵢh∂t += -grid.Krsq*params.η*bᵢh
-
-  # hyperdiffusion term
-  if params.nη > 1
-    @. ∂Bᵢh∂t += -grid.Krsq^params.nη*params.η*bᵢh
-  end
-    
   return nothing
-
+  
 end
 
 # Compute the ∇XB term

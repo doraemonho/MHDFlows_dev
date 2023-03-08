@@ -1,5 +1,5 @@
 # ----------
-# Problem Generation Module: A99 Turbulence Module For GPU only 
+# Problem Generation Module: A99 Turbulence template For GPU only 
 # ----------
 module A99GPU
   using CUDA
@@ -46,7 +46,7 @@ module A99GPU
     return nothing
   end
 
-    function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
+  function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
 
     # A99 Force parameter
     T    = eltype(grid)

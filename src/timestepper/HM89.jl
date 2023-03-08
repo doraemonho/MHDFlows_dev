@@ -1,3 +1,7 @@
+# ----------
+# Implicit timeStepper for EMHD simulation (Harned & Mikic, 1989, J. Computational Phys,  83, 1, pp. 1-15)
+# ----------
+
 struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
   F₀  :: T
   F₁  :: T
@@ -23,10 +27,6 @@ function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, g
   clock.step += 1
   
   return nothing
-end
-
-function stepforward!(sol, clock, timestepper, eqn, vars, params, grid)
-  FourierFlows.stepforward!(sol, clock, timestepper, eqn, vars, params, grid)
 end
 
 function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
@@ -137,7 +137,10 @@ function DivFreeCorrection!(sol, vars, params, grid)
 end
 
 function hyperdiffusionterm!(B₀∇⁴B, B, B₀, k₀, grid)
-  
+  #
+  # hyper diffusion term from HM89
+  #
+
   k² = grid.Krsq
   @. B₀∇⁴B = 1e-1*B₀*k₀^2*k²*B
   
@@ -186,6 +189,7 @@ function LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
 end
 
 function RK3diffusion!(sol, ts, clock, vars, params, grid)
+  # LSKR3 for diffusion term 
   # F0 = dt F(0)
   # p1 = p0 + c1 F0
   # F1  = dt*F(1) - F0*5/9

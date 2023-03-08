@@ -22,10 +22,12 @@ function Problem(dev::Device=CPU();
                  η = 0,
                 nμ = 0,
    # Declare if turn on magnetic field/VP method/Dye Module
+           B_field = false,
+              EMHD = false,
    Compressibility = false,
-    	     B_field = false,
+             Shear = false,
          VP_method = false,
-        Dye_Module = false
+        Dye_Module = false,
   # Timestepper and equation options
            stepper = "RK4",
              calcF = nothingfunction,
@@ -47,6 +49,7 @@ Keyword arguments
   - `η` : Viscosity coefficient for magnetic field.
   - `nν`: (Hyper)-viscosity order, `nν```≥ 1``, not available right now
   - `B_field` :  Declaration of B-field  
+  - `EMHD` : Declarartion of E-MHD
   - `VP_method`: Declaration of Volume penalization method 
   - `Dye_Module`: Declaration of Dye, Passive tracer of the flow; 
   - `stepper`: Time-stepping method.
@@ -73,12 +76,12 @@ function Problem(dev::Device;
                 nν = 0,
                  η = 0.0,
                 nη = 0,
-   # Declare if turn on magnetic field, VP method, Dye module
+   # Declare if turn on magnetic field, EMHD, VP method, Dye module
          B_field = false,
             EMHD = false,
  Compressibility = false,
            Shear = false,
-	     VP_method = false,
+       VP_method = false,
       Dye_Module = false,
   # Timestepper and equation options
            stepper = "RK4",
@@ -98,6 +101,7 @@ function Problem(dev::Device;
 
   # Declare the grid
   if Shear
+    error("Shear haven't fully implemented yet!")
     grid = GetShearingThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)
   else
     grid = ThreeDGrid(dev; nx=nx, Lx=Lx, ny = ny, Ly = Ly, nz = nz, Lz = Lz, T=T)

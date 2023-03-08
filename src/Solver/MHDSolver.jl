@@ -311,43 +311,6 @@ function Get∇XB!(sol, vars, params, grid)
   return nothing
 end
 
-function DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
-#= 
-   Possion Solver for periodic boundary condition
-   As in VP method, ∇ ⋅ B = 0 doesn't hold, B_{t+1} = ∇×Ψ + ∇Φ -> ∇ ⋅ B = ∇² Φ
-   We need to find Φ and remove it using a Poission Solver 
-   Here we are using the Fourier Method to find the Φ
-   In Real Space,  
-   ∇² Φ = ∇ ⋅ B   
-   In k-Space,  
-   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Bₖ)ᵢ
-   Φ = F{ i∑ᵢ kᵢ (Bₖ)ᵢ / ∑ᵢ (k²)ᵢ}
-=#  
-
-  #find Φₖ
-  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
-  k⁻² = grid.invKrsq;
-  @. vars.nonlin1  *= 0;
-  @. vars.nonlinh1 *= 0;       
-  ∑ᵢkᵢBᵢh_k² = vars.nonlinh1;
-  ∑ᵢkᵢBᵢ_k²  = vars.nonlin1;
-
-  # it is N not sol
-  @views bxh = sol[:, :, :, params.bx_ind];
-  @views byh = sol[:, :, :, params.by_ind];
-  @views bzh = sol[:, :, :, params.bz_ind];
-
-  @. ∑ᵢkᵢBᵢh_k² = -im*(kᵢ*bxh + kⱼ*byh + kₖ*bzh);
-  @. ∑ᵢkᵢBᵢh_k² = ∑ᵢkᵢBᵢh_k²*k⁻²;  # Φₖ
- 
-  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
-  @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
-  @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
-  @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
-
-  return nothing
-end
-
 function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update B Advection
@@ -359,8 +322,7 @@ function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   #Update B Real Conponment
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
   ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
-  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
-  DivFreeCorrection!(N, sol, t, clock, vars, params, grid)
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind]))
 
   return nothing
 end

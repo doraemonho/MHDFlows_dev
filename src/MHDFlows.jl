@@ -42,7 +42,7 @@ include("DiagnosticWrapper.jl")
 include("integrator.jl")
 
 # timestepper
-include("timestepper/LSRK3.jl")
+include("timestepper/timestepper.jl")
 
 #utils
 include("utils/utils.jl");

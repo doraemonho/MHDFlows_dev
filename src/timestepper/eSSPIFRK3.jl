@@ -41,10 +41,6 @@ function getL!(Lᵢ, t, clock, vars, params, grid)
   return nothing
 end
 
-function stepforward!(sol, clock, timestepper, eqn, vars, params, grid)
-  FourierFlows.stepforward!(sol, clock, timestepper, eqn, vars, params, grid)
-end
-
 function stepforward!(sol, clock, ts::eSSPIFRK3TimeStepper, equation, vars, params, grid)
   eSSPIFRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   clock.t += clock.dt

@@ -21,7 +21,6 @@ const  Mat{T}  = Array{T,2};
 const Cube{T}  = Array{T,3};
 
 # dot product
-(a1,a2,a3)⋅(b1,b2,b3) = @. a1*b1 + a2*b2 + a3*b3
 (a1,a2)⋅(b1,b2) = @. a1*b1 + a2*b2 
 
 # cross product
@@ -31,7 +30,6 @@ const Cube{T}  = Array{T,3};
 |b1 b2 b3|
 ==#
 (a1,a2,a3)×(b1,b2,b3) = ( @. a2*b3-a3*b2, @. a3*b1-a1*b3, @. a1*b2-a2*b1)
-
 
 s(vx,vy,vz) = (vx,vy,vz)⋅(vx,vy,vz)
 s(vx,vy)    = (vx,vy)⋅(vx,vy)

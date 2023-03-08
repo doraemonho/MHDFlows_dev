@@ -142,7 +142,7 @@ function hyperdiffusionterm!(B₀∇⁴B, B, B₀, k₀, grid)
   #
 
   k² = grid.Krsq
-  @. B₀∇⁴B = 1e-1*B₀*k₀^2*k²*B
+  @. B₀∇⁴B = B₀*k₀^2*k²*B/4.0
   
   return nothing
 end
@@ -160,6 +160,7 @@ function checkmB(mB, i)
 end
 
 function LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
+  # Low stoage 3 step RK3 method (LSRK3)
   # F0 = dt F(0)
   # p1 = p0 + c1 F0
   # F1  = dt*F(1) - F0*5/9

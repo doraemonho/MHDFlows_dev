@@ -27,24 +27,24 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   if direction == "x"
 
   	# a = {1,2,3} -> {x,y,z} direction
-  	a    = 1;
-  	kₐ   = grid.kr;
-  	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.ux_ind::Int];
+  	a    = 1
+  	kₐ   = grid.kr
+  	k⁻²  = grid.invKrsq
+  	∂uᵢh∂t = @view N[:,:,:,params.ux_ind::Int]
 
   elseif direction == "y"
 
-  	a    = 2;
-  	kₐ   = grid.l;
+  	a    = 2
+  	kₐ   = grid.l
   	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.uy_ind::Int];
+  	∂uᵢh∂t = @view N[:,:,:,params.uy_ind::Int]
     
   elseif direction == "z"
 
-  	a    = 3;
-  	kₐ   = grid.m;
-  	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.uz_ind::Int];
+  	a    = 3
+  	kₐ   = grid.m
+  	k⁻²  = grid.invKrsq
+  	∂uᵢh∂t = @view N[:,:,:,params.uz_ind::Int]
 
   else
 
@@ -52,20 +52,20 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
   end
 
-  @. ∂uᵢh∂t*= 0;
-  uᵢuⱼ  = vars.nonlin1;    
-  uᵢuⱼh = vars.nonlinh1;
+  @. ∂uᵢh∂t*= 0
+  uᵢuⱼ  = vars.nonlin1    
+  uᵢuⱼh = vars.nonlinh1
   for (uᵢ,kᵢ,i) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
     for (uⱼ,kⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
       if i <= j
         # Pre-Calculation in Real Space
-        @. uᵢuⱼ = uᵢ*uⱼ;
+        @. uᵢuⱼ = uᵢ*uⱼ
 
         # Fourier transform 
-        mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ);
+        mul!(uᵢuⱼh, grid.rfftplan, uᵢuⱼ)
 
         # Perform the actual calculation
-        @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh;
+        @. ∂uᵢh∂t += -im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*uᵢuⱼh
         if i !=j
           @. ∂uᵢh∂t += -im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*uᵢuⱼh
         end
@@ -79,14 +79,14 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   end
 
   #Compute the diffusion term  - νk^2 u_i
-  uᵢ = direction == "x" ? vars.ux : direction == "y" ? vars.uy : vars.uz;
-  uᵢh = vars.nonlinh1;
-  mul!(uᵢh, grid.rfftplan, uᵢ); 
-  @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh;
+  uᵢ = direction == "x" ? vars.ux : direction == "y" ? vars.uy : vars.uz
+  uᵢh = vars.nonlinh1
+  mul!(uᵢh, grid.rfftplan, uᵢ) 
+  @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh
 
   # hyperdiffusion term
   if params.nν > 1
-    @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
+    @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh
   end
 
   return nothing   

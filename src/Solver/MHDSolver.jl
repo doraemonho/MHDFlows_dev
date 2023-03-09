@@ -29,22 +29,22 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
   if direction == "x"
 
   	# a = {1,2,3} -> {x,y,z} direction
-  	a    = 1;
-  	kₐ   = grid.kr;
-  	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.ux_ind];
+  	a    = 1
+  	kₐ   = grid.kr
+  	k⁻²  = grid.invKrsq
+  	∂uᵢh∂t = @view N[:,:,:,params.ux_ind]
 
   elseif direction == "y"
 
-  	a    = 2;
-  	kₐ   = grid.l;
-  	k⁻²  = grid.invKrsq;
-  	∂uᵢh∂t = @view N[:,:,:,params.uy_ind];
+  	a    = 2
+  	kₐ   = grid.l
+  	k⁻²  = grid.invKrsq
+  	∂uᵢh∂t = @view N[:,:,:,params.uy_ind]
 
   elseif direction == "z"
-  	a    = 3;
-  	kₐ   = grid.m;
-  	k⁻²  = grid.invKrsq;
+  	a    = 3
+  	kₐ   = grid.m
+  	k⁻²  = grid.invKrsq
   	∂uᵢh∂t = @view N[:,:,:,params.uz_ind]
 
   else
@@ -64,19 +64,19 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
     for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1, 2, 3))
       if j >= i
         # Initialization
-        @. vars.nonlin1  *= 0;
-        @. vars.nonlinh1 *= 0;
-        bᵢbⱼ_minus_uᵢuⱼ  = vars.nonlin1;  
-        bᵢbⱼ_minus_uᵢuⱼh = vars.nonlinh1;
+        @. vars.nonlin1  *= 0
+        @. vars.nonlinh1 *= 0
+        bᵢbⱼ_minus_uᵢuⱼ  = vars.nonlin1  
+        bᵢbⱼ_minus_uᵢuⱼh = vars.nonlinh1
 
         # Perform Computation in Real space
-        @. bᵢbⱼ_minus_uᵢuⱼ = bᵢ*bⱼ - uᵢ*uⱼ;
-        mul!(bᵢbⱼ_minus_uᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_uᵢuⱼ);
+        @. bᵢbⱼ_minus_uᵢuⱼ = bᵢ*bⱼ - uᵢ*uⱼ
+        mul!(bᵢbⱼ_minus_uᵢuⱼh, grid.rfftplan, bᵢbⱼ_minus_uᵢuⱼ)
 
         # Perform the Actual Advection update
-        @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
+        @. ∂uᵢh∂t += im*kᵢ*(δ(a,j)-kₐ*kⱼ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh
         if i != j  # repeat the calculation for u_ij
-          @. ∂uᵢh∂t += im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh;
+          @. ∂uᵢh∂t += im*kⱼ*(δ(a,i)-kₐ*kᵢ*k⁻²)*bᵢbⱼ_minus_uᵢuⱼh
         end
       end
     end
@@ -89,13 +89,13 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
 
   #Compute the diffusion term  - νk^2 u_i
   uᵢ = direction == "x" ? vars.ux : direction == "y" ? vars.uy : vars.uz;
-  uᵢh = vars.nonlinh1;
-  mul!(uᵢh, grid.rfftplan, uᵢ); 
-  @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh;
+  uᵢh = vars.nonlinh1
+  mul!(uᵢh, grid.rfftplan, uᵢ)
+  @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh
   
   # hyperdiffusion term
   if params.nν > 1
-    @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh;
+    @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.ν*uᵢh
   end
 
   return nothing

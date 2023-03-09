@@ -12,7 +12,7 @@ struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
 end
 
 function HM89TimeStepper(equation, dev::Device=CPU())
-  @devzeros typeof(dev) equation.T equation.dims   F₀  F₁  B⁰  B¹ Bⁿ 
+  @devzeros typeof(dev) equation.T equation.dims  F₀  F₁  B⁰  B¹ Bⁿ 
 
   c = (1//3, 15//16, 8//15)
 
@@ -142,7 +142,7 @@ function hyperdiffusionterm!(B₀∇⁴B, B, B₀, k₀, grid)
   #
 
   k² = grid.Krsq
-  @. B₀∇⁴B = B₀*k₀^2*k²*B/4.0
+  @. B₀∇⁴B = B₀*k₀^2*k²*B*1e-2
   
   return nothing
 end

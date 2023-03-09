@@ -125,15 +125,15 @@ function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::Abstract
   #  timestepper = eSSPIFRK3TimeStepper(eqn, dev) #For SFlag
     timestepper = HM89TimeStepper(eqn, dev) #For EFlag
   else
-    timestepper = FourierFlows.TimeStepper(stepper, eqn, dt, dev);
+    timestepper = FourierFlows.TimeStepper(stepper, eqn, dt, dev)
   end
-  sol = zeros(dev, eqn.T, eqn.dims);
+  sol = zeros(dev, eqn.T, eqn.dims)
 
-  flag = Flag(BFlag, EFlag, VPFlag, CFlag, SFlag);
+  flag = Flag(BFlag, EFlag, VPFlag, CFlag, SFlag)
 
-  dye = DyeContructer(dev, DyeFlag, grid);
+  dye = DyeContructer(dev, DyeFlag, grid)
 
-  usr_func = length(usr_func) == 0 ? [nothingfunction] : usr_func;
+  usr_func = length(usr_func) == 0 ? [nothingfunction] : usr_func
 
   return MHDFlowsProblem(sol, clock, eqn, grid, vars, params, timestepper, flag, usr_func, dye)
 

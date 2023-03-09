@@ -58,7 +58,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   B_half = sol
 
   ε  = 1.0;
-  err = 1e-3;
+  err = 1e-4;
 
   while ε > err 
     
@@ -142,7 +142,7 @@ function hyperdiffusionterm!(B₀∇⁴B, B, B₀, k₀, grid)
   #
 
   k² = grid.Krsq
-  @. B₀∇⁴B = B₀*k₀^2*k²*B*1e-2
+  @. B₀∇⁴B = B₀*k₀^2*k²*B*2.5e-1
   
   return nothing
 end

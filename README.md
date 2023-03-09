@@ -59,15 +59,15 @@ Environment: WSL2 in Win11 (Ubuntu 18.04/20.04 LTS through jupyter-lab)
 
 | Spec CPU/GPU                | $32^3$ | $64^3$ | $128^3$ | $256^3$ |
 | --------------------------- | ------ | ------ | ------- | ------- |
-| AMD Ryzen 7 5800x 8 threads | 0.139s | 0.178s | 0.764s  | 7.025s  |
-| NVIDIA RTX 3080 10GB        | 0.016s | 0.018s | 0.038s  | 0.211s  |
+| AMD Ryzen 7 5800x 8 threads | 0.040s | 0.074s | 0.490S  | 7.025s  |
+| NVIDIA RTX 3080 10GB        | 0.016s | 0.018s | 0.023s  | 0.152s  |
 
 **MHD** (Taylor Green Vortex, T = Float32)
 
 | Spec CPU/GPU                | $32^3$ | $64^3$ | $128^3$ | $256^3$ |
 | --------------------------- | ------ | ------ | ------- | ------- |
-| AMD Ryzen 7 5800x 8 threads | 0.12s  | 0.220s | 1.49s   | 14.50s  |
-| NVIDIA RTX 3080 10GB        | 0.019s | 0.019s | 0.050s  | 0.39 s  |
+| AMD Ryzen 7 5800x 8 threads | 0.049s | 0.180s | 1.490s  | 14.50s  |
+| NVIDIA RTX 3080 10GB        | 0.013s | 0.012s | 0.037s  | 0.271s  |
 
 ## Example
 Few examples were set up to illustrate the workflow of using this package. [Check out](https://github.com/MHDFlows/MHDFlows-Example) for more detail.  The documentation is work in progress and will be available in the future. 

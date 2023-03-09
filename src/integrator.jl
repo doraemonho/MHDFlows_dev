@@ -63,7 +63,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
     nv = prob.flag.e ? prob.params.nη : maximum([prob.params.nν,prob.params.nη])
   else
     vi = prob.params.ν
-    nv = prob.params.n
+    nv = prob.params.nν
   end
   dx = prob.grid.Lx/prob.grid.nx
   dy = prob.grid.Ly/prob.grid.ny

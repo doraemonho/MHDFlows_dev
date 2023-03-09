@@ -13,6 +13,7 @@ This package leverages the [FourierFlows.jl](http://github.com/FourierFlows/Four
 
 ## Version No.
 v 0.2.0
+note : v 0.2.0 will be the final major update before the multi-gpu version release 
 
 ## Installation Guide & compatibility 
 The current version is tested on v1.7.3/1.8.2/1.9.0 version.

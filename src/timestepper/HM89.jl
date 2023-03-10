@@ -189,7 +189,7 @@ function LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   return nothing
 end
 
-function RK3diffusion!(sol, ts, clock, vars, params, grid)
+function RK3linearterm!(sol, ts, clock, vars, params, grid)
   # LSKR3 for diffusion term 
   # F0 = dt F(0)
   # p1 = p0 + c1 F0
@@ -203,18 +203,21 @@ function RK3diffusion!(sol, ts, clock, vars, params, grid)
   c  = ts.c
   k² = grid.Krsq
   η  = params.η
-
-  @. ts.F₀ =  -η*k²*sol
+  
+  params.calcF!(ts.F₀, sol, t + dt, clock, vars, params, grid)
+  @. ts.F₀ -=  η*k²*sol
   @. ts.F₀ *=  dt
   @.  sol  += ts.F₀*c[1]*dt
 
-  @. ts.F₁ =  -η*k²*sol
+  params.calcF!(ts.F₁, sol, t + dt, clock, vars, params, grid)
+  @. ts.F₁ -=  η*k²*sol
   @. ts.F₁ *=  dt
   @. ts.F₁ -=  5/9*ts.F₀
   @.  sol  +=  c[2]*ts.F₁
 
   # reuse F2 = F0
-  @. ts.F₀ =  -η*k²*sol
+  params.calcF!(ts.F₀, sol, t + dt, clock, vars, params, grid)
+  @. ts.F₀ -= η*k²*sol
   @. ts.F₀ *= dt
   @. ts.F₀ -= 153/128*ts.F₁
   @.   sol += c[3]*ts.F₀

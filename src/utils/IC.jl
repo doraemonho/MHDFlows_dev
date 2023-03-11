@@ -66,15 +66,17 @@ function SetUpProblemIC!(prob;  ρ = [],
   end
 
   # Copy the data to both output and solution array
-  for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],
-                                [params.ux_ind,params.uy_ind,params.uz_ind])
-    if uᵢ != []
-      @views sol₀ =  sol[:, :, :, uᵢind];
-      copyto!(prob_uᵢ,uᵢ);
-      if prob.flag.c 
-        mul!(sol₀ , grid.rfftplan, @. vars.ρ*prob_uᵢ);
-      else
-        mul!(sol₀ , grid.rfftplan, prob_uᵢ);
+  if !prob.flag.e
+    for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],
+                                  [params.ux_ind,params.uy_ind,params.uz_ind])
+      if uᵢ != []
+        @views sol₀ =  sol[:, :, :, uᵢind];
+        copyto!(prob_uᵢ,uᵢ);
+        if prob.flag.c 
+          mul!(sol₀ , grid.rfftplan, @. vars.ρ*prob_uᵢ);
+        else
+          mul!(sol₀ , grid.rfftplan, prob_uᵢ);
+        end
       end
     end
   end

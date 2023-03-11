@@ -58,7 +58,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   B_half = sol
 
   ε  = 1.0;
-  err = 1e-4;
+  err = 5e-4;
 
   while ε > err 
     
@@ -88,7 +88,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   end
 
   copyto!(sol, B¹)
-  RK3diffusion!(sol, ts, clock, vars, params, grid)
+  RK3linearterm!(sol, ts, clock, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
 
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))

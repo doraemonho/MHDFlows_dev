@@ -30,9 +30,10 @@ function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, g
 end
 
 function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
-  # we solve the equation of 
-  # B^{n+1} + (Δt)²(B₀·∇)²∇^2B^{n+1} = Bⁿ + (Δt)²(B₀·∇)^2∇^2Bⁿ - Δt∇×(J^{n+1/2}× B^{n+1/2})
-  # using fix point method
+  # we solve the equation using the most simplist 2nd order implicit methed: trapezoidal rule method
+  # Consider the y_{n+1} = y_n + (h/2)*(f(t_n, y_n) + f(t_{n+1}, y_{n+1})) = f(x)
+  # using fix point method, we define g = x_{n+1} - f(x)
+  # note : We arrive at x_{n + 1} = x_n + (\Delta t)*f(t_{n+1/2}, y_{n+1/2})) 
   square_mean(A,B,C) =  mapreduce((x,y,z)->√(x*x+y*y+z*z),max,A,B,C)
 
   t, Δt, c  = clock.t, clock.dt, ts.c
@@ -53,26 +54,22 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   # get B\^{n+1} guess from RK3 Method
   copyto!(B⁰, sol)
   LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
+  DivFreeCorrection!(sol, vars, params, grid)
   copyto!( B¹,  sol)
   dealias!(B¹, grid)
   B_half = sol
 
-  ε  = 1.0;
+  ε   = 1.0;
   err = 5e-4;
 
   while ε > err 
     
+    # get the ∇×(J × B) term from B^{n+1/2}
     @. B_half = (B⁰ + B¹)*0.5
-    
-    # get the ∇×(J × B) term
     equation.calcN!(∇XJXB, B_half, t, clock, vars, params, grid)
-    
-    # hyper diffusion term
-    @. B_half = (B⁰ - B¹)
-    hyperdiffusionterm!(B₀∇⁴B, B_half, B₀, k₀, grid)
 
     # get the term B\^ n + 1
-    @. Bⁿ = B⁰ + Δt^2*B₀∇⁴B - Δt*∇XJXB
+    @. Bⁿ = B⁰ + Δt*∇XJXB
     dealias!(Bⁿ, grid)
 
     # compute the error
@@ -84,7 +81,6 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
     # copy to Bⁿ to be B¹
     copyto!(B¹, Bⁿ)
-
   end
 
   copyto!(sol, B¹)
@@ -142,7 +138,7 @@ function hyperdiffusionterm!(B₀∇⁴B, B, B₀, k₀, grid)
   #
 
   k² = grid.Krsq
-  @. B₀∇⁴B = B₀*k₀^2*k²*B*2.5e-1
+  @. B₀∇⁴B = k²*(B₀)*B
   
   return nothing
 end

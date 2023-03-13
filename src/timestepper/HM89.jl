@@ -1,5 +1,6 @@
 # ----------
-# Implicit timeStepper for EMHD simulation (Harned & Mikic, 1989, J. Computational Phys,  83, 1, pp. 1-15)
+# Implicit timeStepper for EMHD simulation
+# note: while the module is called HM89, but no longer related to HM89....
 # ----------
 
 struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
@@ -31,27 +32,24 @@ end
 
 function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   # we solve the equation using the most simplist 2nd order implicit methed: trapezoidal rule method
-  # Consider the y_{n+1} = y_n + (h/2)*(f(t_n, y_n) + f(t_{n+1}, y_{n+1})) = f(x)
-  # using fix point method, we define g = x_{n+1} - f(x)
-  # note : We arrive at x_{n + 1} = x_n + (\Delta t)*f(t_{n+1/2}, y_{n+1/2})) 
+  # Consider the y_{n+1} = y_n + (Δt/2)*(f(t_n, y_n) + f(t_{n+1}, y_{n+1})) = f(y)
+  # using fix point method, we define g = y_{n+1} - f(y)
+  # note : We arrive at y_{n + 1} = y_n + (Δt)*f(t_{n+1/2}, y_{n+1/2})) 
+  # If the y_n is convergence, y_{n+1} = y_{n}
+
+#-------------------------------------------------------------------------------------------#
+  # Define the function and var that will be used
   square_mean(A,B,C) =  mapreduce((x,y,z)->√(x*x+y*y+z*z),max,A,B,C)
 
   t, Δt, c  = clock.t, clock.dt, ts.c
   
   B⁰, B¹, Bⁿ = ts.B⁰, ts.B¹, ts.Bⁿ
 
-  ΔBh, B₀∇⁴B, ∇XJXB =  ts.F₀, ts.F₀, ts.F₁
+  ΔBh, ∇XJXB =  ts.F₀, ts.F₁
 
   ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
-
-  # check the mean field condition &  determine the k₀ for later usage
-  mB = ( mean(vars.bx), mean(vars.by), mean(vars.bz) )
-  i = findmax(mB)[2]
-  checkmB( mB, i )
-  B₀ = mB[i] 
-  k₀ = ifelse( i == 1, grid.kr, ifelse(i == 2,  grid.l, grid.m ) )
   
-  # get B\^{n+1} guess from RK3 Method
+  # copy B⁰ from sol and get guess of B\^{n+1} from LSRK3 Method
   copyto!(B⁰, sol)
   LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
@@ -128,29 +126,6 @@ function DivFreeCorrection!(sol, vars, params, grid)
   @. bxh  -= im*kᵢ.*∑ᵢkᵢBᵢh_k²;
   @. byh  -= im*kⱼ.*∑ᵢkᵢBᵢh_k²;
   @. bzh  -= im*kₖ.*∑ᵢkᵢBᵢh_k²;
-
-  return nothing
-end
-
-function hyperdiffusionterm!(B₀∇⁴B, B, B₀, k₀, grid)
-  #
-  # hyper diffusion term from HM89
-  #
-
-  k² = grid.Krsq
-  @. B₀∇⁴B = k²*(B₀)*B
-  
-  return nothing
-end
-
-function checkmB(mB, i)
-  @assert length(mB) == 3
-
-  for j = 1:3
-    if  i != j && mB[j] > 0.3
-      error(" Only support single mean field driection! \n")
-    end
-  end
 
   return nothing
 end

@@ -66,7 +66,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @. B_half = (B⁰ + B¹)*0.5
     equation.calcN!(∇XJXB, B_half, t, clock, vars, params, grid)
 
-    # get the term B\^ n + 1
+    # get the term B\^ n + 1 and de-alias the result to avoid aliasing error
     @. Bⁿ = B⁰ + Δt*∇XJXB
     dealias!(Bⁿ, grid)
 
@@ -81,10 +81,12 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     copyto!(B¹, Bⁿ)
   end
 
+  #Compute the diffusion term and forcing using the explicit method 
   copyto!(sol, B¹)
   RK3linearterm!(sol, ts, clock, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
 
+  #copy the ans back to real vars
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
   ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
   ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 

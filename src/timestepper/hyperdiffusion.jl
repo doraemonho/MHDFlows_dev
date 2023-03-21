@@ -25,9 +25,9 @@ function Implicitdiffusion!(prob)
   # Define the function and var that will be used
   square_mean(A,B,C) =  mapreduce((x,y,z)->√(x*x+y*y+z*z),max,A,B,C)
 
-  sol, clock, ts, vars, params = 
+  sol, clock, ts, vars, params, grid = 
                         prob.sol, prob.clock, prob.timestepper,
-                        prob.vars, prob.params
+                        prob.vars, prob.params, prob.grid
 
   t, Δt  = clock.t, clock.dt, ts
       k² = grid.Krsq

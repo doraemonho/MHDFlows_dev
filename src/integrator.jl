@@ -69,7 +69,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
   dy = prob.grid.Ly/prob.grid.ny
   dz = prob.grid.Lz/prob.grid.nz
   dl = minimum([dx,dy,dz])
-  t_diff = ifelse(nv >1, CFL_Coef*(dl)^(nv)/vi, CFL_Coef*dl^2/vi)
+  t_diff = CFL_Coef*(dl)^(nv)/vi
 
   # Declare the iterator paramters
   t_next_save = prob.clock.t + dump_dt

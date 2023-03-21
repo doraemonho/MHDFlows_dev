@@ -115,7 +115,7 @@ function Problem(dev::Device;
   # Delare params
   params = SetParams(dev, grid, calcF, usr_params; 
              B = B_field, E = EMHD, VP = VP_method, C= Compressibility, S=Shear,
-             cₛ = cₛ, ν = ν, η = η, nν = nν, hν = hν, hη = hη);
+             cₛ = cₛ, ν = ν, η = η, nν = nν, nη = nη, hν = hν, hη = hη);
 
   # Declare Fiuld Equations that will be iterating 
   equation = Equation_with_forcing(dev, grid; B = B_field, E = EMHD, C = Compressibility, S=Shear);

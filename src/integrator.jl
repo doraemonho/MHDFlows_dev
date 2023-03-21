@@ -127,6 +127,11 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       #Shear Update
       prob.flag.s == true ? Shear.Shearing_remapping!(prob) : nothing      
 
+      #hyper diffusion Update
+      if prob.params.nν > 0 || prob.params.nη > 0
+        Implicitdiffusion!(prob)
+      end 
+
       #User defined function
       for foo! ∈ prob.usr_func
           foo!(prob)
@@ -142,7 +147,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
       # Update the dashboard information to user
       dynamic_dashboard ? Dynamic_Dashboard(prob,prog, N₀,t₀) : 
-                            Static_Dashbroad(prob,prob.clock.step% loop_number)
+                           Static_Dashbroad(prob,prob.clock.step% loop_number)
     end
 
   end

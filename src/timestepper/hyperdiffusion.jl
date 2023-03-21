@@ -16,7 +16,7 @@ function Implicitdiffusion!(prob)
   # If the y_n is convergence, y_{n+1} = y_{n}
 
   # check if user declare the correct time intragtion solver
-  if string(nameof(typeof(CPUprob.timestepper)))[1:3] ∉ allowedtimesteppers
+  if string(nameof(typeof(prob.timestepper)))[1:3] ∉ allowedtimesteppers
     error("Implicit diffusion Solver only support RK4 /LSRK4 non-linear term solver!")
   end
 

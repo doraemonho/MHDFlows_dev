@@ -92,11 +92,6 @@ function UᵢUpdate!(N, sol, t, clock, vars, params, grid; direction="x")
   uᵢh = vars.nonlinh1
   mul!(uᵢh, grid.rfftplan, uᵢ)
   @. ∂uᵢh∂t += -grid.Krsq*params.ν*uᵢh
-  
-  # hyperdiffusion term
-  if params.nν > 1
-    @. ∂uᵢh∂t += -grid.Krsq^params.nν*params.hν*uᵢh
-  end
 
   return nothing
     
@@ -166,11 +161,6 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   bᵢh = vars.nonlinh1;
   mul!(bᵢh, grid.rfftplan, bᵢ); 
   @. ∂Bᵢh∂t += -grid.Krsq*params.η*bᵢh;
-
-  # hyperdiffusion term
-  if params.nη > 1
-    @. ∂Bᵢh∂t += -grid.Krsq^params.nη*params.hη*bᵢh;
-  end
     
     return nothing
 

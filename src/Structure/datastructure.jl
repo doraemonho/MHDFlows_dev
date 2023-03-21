@@ -68,7 +68,7 @@ end
 
  function SetParams(::Dev, grid, calcF::Function, usr_params;
                      B = false, VP = false, C = false, S = false, E = false,
-                     cₛ = 0, ν = 0, η = 0, nν = 0, nη = 0) where Dev
+                     cₛ = 0, ν = 0, η = 0, nν = 0, nη = 0, hν = 0, hη = 0) where Dev
   T = eltype(grid);
   usr_param = typeof(usr_params)
   
@@ -87,7 +87,7 @@ end
     elseif (E)
       params = EMHDParams(η, nη, 1, 2, 3, calcF, usr_params, to);
     else
-      params = MHDParams(ν, η, nν, nη, 1, 2, 3, 4, 5, 6, calcF, usr_params, to);
+      params = MHDParams(ν, η, nν, nη, hν, hη, 1, 2, 3, 4, 5, 6, calcF, usr_params, to);
     end
   else
     if (VP)

@@ -8,6 +8,10 @@ struct MHDParams_VP{Aphys,usr_param,to} <: AbstractParams
     nν :: Int
   "(hyper)-resisivity order, `nη```≥ 1``"
     nη :: Int
+  "small-scale hyper-viscosity coefficient for v"
+    hν :: Number
+  "small-scale hyper-viscosity coefficient for b"
+    hη :: Number
 
   "Array Indexing for velocity"
     ux_ind :: Int

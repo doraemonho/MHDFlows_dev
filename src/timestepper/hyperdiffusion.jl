@@ -31,8 +31,7 @@ function Implicitdiffusion!(prob)
 
   t, Δt  = clock.t, clock.dt, ts
       k² = grid.Krsq
-  nν,nη  = params.nν, params.nη 
-  hν,hη  = params.hν,  params.hη
+  nν,hν  = params.nν, params.hν
   
   if  string(nameof(typeof(ts)))[1:3] == "RK4"
     sol₀, sol₁, solₙ = ts.RHS₃, ts.RHS₁, ts.RHS₂
@@ -47,6 +46,7 @@ function Implicitdiffusion!(prob)
   ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
   ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
   if prob.flag.b
+    nη,hη  = params.nη, params.hη
     ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
     ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]));
     ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]));

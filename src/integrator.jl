@@ -128,7 +128,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
       prob.flag.s == true ? Shear.Shearing_remapping!(prob) : nothing      
 
       #hyper diffusion Update
-      if prob.params.nν > 0 || prob.params.nη > 0
+      if prob.params.nν > 1
         Implicitdiffusion!(prob)
       end 
 

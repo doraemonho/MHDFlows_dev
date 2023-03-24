@@ -40,7 +40,6 @@ function Implicitdiffusion!(prob)
     sol₀, sol₁, solₙ = sol, ts.RHS, ts.S²
   end
 
-  ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
   Δux, Δuy, Δuz = vars.ux, vars.uy, vars.uz
   
   # copy sol₀ from sol and get guess of B\^{n+1} from LSRK3 Method
@@ -48,6 +47,7 @@ function Implicitdiffusion!(prob)
   ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
   ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
   if prob.flag.b
+    ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
     ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]));
     ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]));
     ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])); 

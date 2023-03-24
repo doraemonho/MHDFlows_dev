@@ -4,6 +4,8 @@ struct HDParams_VP{Aphys,usr_param,to} <: AbstractParams
     ν :: Number
   "(hyper)-viscosity order, `nν```≥ 1``"
     nν :: Int
+  "small-scale hyper-viscosity coefficient for v"
+    hν :: Number
 
   "Array Indexing for velocity"
     ux_ind :: Int
@@ -33,6 +35,8 @@ struct HDParams{usr_param,to} <: AbstractParams
    ν :: Number
   "(hyper)-viscosity order, `nν```≥ 1``"
    nν :: Int
+  "small-scale hyper-viscosity coefficient for v"
+    hν :: Number
 
   "Array Indexing for velocity"
    ux_ind :: Int

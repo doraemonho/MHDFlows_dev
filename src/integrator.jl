@@ -129,7 +129,7 @@ function TimeIntegrator!(prob,t₀ :: Number,N₀ :: Int;
 
       #hyper diffusion Update
       if (! prob.flag.e) &&  (! prob.flag.c)
-        prob.params.nν >  ? Implicitdiffusion!(prob) : nothing
+        prob.params.nν >  1 ? Implicitdiffusion!(prob) : nothing
       end 
 
       #User defined function

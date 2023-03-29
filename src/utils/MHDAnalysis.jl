@@ -254,3 +254,42 @@ function spectralline(A::Array{T,3};Lx=2π) where T
   return Pk,kr
 end
 
+
+function SlowMode(B1::Array,B2::Array,B3::Array;
+              Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
+    # Wrapper for Curl Function
+    nx,ny,nz = size(B1);
+    grid = GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
+    B1s,B2s,cB3s = SlowMode(B1,B2,B3,grid)
+    return B1s,B2s,B3s;
+end
+
+function SlowMode(B1,B2,B3,grid)
+  #funtion of computing Slow mode of B-field B_s using the fourier method
+  # where B_s = k × (k×B)
+  nx,ny,nz = size(B1)
+  dev = typeof(B1) <: Array ? CPU() : GPU()
+  T   = eltype(grid)
+
+  @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h CB1h CB2h CB3h
+  @devzeros typeof(dev)         T  (         nx,ny,nz) B1s B2s B3s
+
+  mul!(B1h, grid.rfftplan, B1) 
+  mul!(B2h, grid.rfftplan, B2) 
+  mul!(B3h, grid.rfftplan, B3)
+  
+  kx,ky,kz = grid.kr,grid.l,grid.m 
+  # first k×B
+  @. CB1h = im*(ky*B3h - kz*B2h)
+  @. CB2h = im*(kz*B1h - kx*B3h)
+  @. CB3h = im*(kx*B2h - ky*B1h)
+  # second k×(k×B)
+  @. B1h = im*(ky*CB3h - kz*CB2h)
+  @. B2h = im*(kz*CB1h - kx*CB3h)
+  @. B3h = im*(kx*CB2h - ky*CB1h)
+  
+  ldiv!(B1s, grid.rfftplan, B1h)  
+  ldiv!(B2s, grid.rfftplan, B2h)
+  ldiv!(B3s, grid.rfftplan, B3h)
+  return cB1,cB2,cB3
+end

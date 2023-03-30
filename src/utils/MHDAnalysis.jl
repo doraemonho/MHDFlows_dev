@@ -31,7 +31,6 @@ function ScaleDecomposition(B1::Array,grid;kf=[1,5])
   @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h
   @devzeros typeof(dev)         T  (         nx,ny,nz) cB1
   @devzeros typeof(dev)         T  (div(nx,2)+1,ny,nz)  K  kr
-
   mul!(B1h, grid.rfftplan, B1);
     
   kx,ky,kz = grid.kr,grid.l,grid.m;
@@ -254,42 +253,105 @@ function spectralline(A::Array{T,3};Lx=2π) where T
   return Pk,kr
 end
 
-
-function SlowMode(B1::Array,B2::Array,B3::Array;
+#------------------------ mode analysis --------------------------------------#
+function SlowMode(U1::Array,U2::Array,U3::Array, B1::Array,B2::Array,B3::Array;
               Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
-    # Wrapper for Curl Function
+    
+    # Wrapper for SlowMode Function
+    #compute the mean field direction
+    mb1,mb2,mb3 = mean(B1), mean(B2), mean(B3)
+    mbb = sqrt(mb1^2 + mb2^2 + mb3^2)
+    mb1,mb2,mb3 = mb1/mbb,mb2/mbb,mb3/mbb
+    
     nx,ny,nz = size(B1);
-    grid = GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
-    B1s,B2s,cB3s = SlowMode(B1,B2,B3,grid)
+    grid = MHDFlows.GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
+    B1s,B2s,B3s = SlowMode(U1,U2,U3, (mb1,mb2,mb3), grid)
     return B1s,B2s,B3s;
 end
 
-function SlowMode(B1,B2,B3,grid)
+function AlfvenMode(U1::Array,U2::Array,U3::Array, B1::Array,B2::Array,B3::Array;
+                   Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
+    
+    # Wrapper for AlfMode Function
+    # computing the mean field direction
+    mb1,mb2,mb3 = mean(B1), mean(B2), mean(B3)
+    mbb = sqrt(mb1^2 + mb2^2 + mb3^2)
+    mb1,mb2,mb3 = mb1/mbb,mb2/mbb,mb3/mbb
+   
+    nx,ny,nz = size(B1);
+    grid = MHDFlows.GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
+    B1s,B2s,B3s = AlfvenMode(U1,U2,U3,(mb1,mb2,mb3),grid)
+    return B1s,B2s,B3s;
+end
+
+function SlowMode(B1,B2,B3,mb,grid)
   #funtion of computing Slow mode of B-field B_s using the fourier method
-  # where B_s = k × (k×B)
+  # where B_s = \vec{B} ⋅ \vec(k × (k×B₀))
   nx,ny,nz = size(B1)
   dev = typeof(B1) <: Array ? CPU() : GPU()
   T   = eltype(grid)
 
-  @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h CB1h CB2h CB3h
+  @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h B1sh B2sh B3sh
   @devzeros typeof(dev)         T  (         nx,ny,nz) B1s B2s B3s
+
+  k⁻² = grid.invKrsq
+  mb1,mb2,mb3 = mb  
+  mul!(B1h, grid.rfftplan, B1) 
+  mul!(B2h, grid.rfftplan, B2) 
+  mul!(B3h, grid.rfftplan, B3)
+  
+  kx,ky,kz = grid.kr,grid.l,grid.m 
+  # first k×B₀ vector
+  vB1h = @. (ky*mb3 - kz*mb2)
+  vB2h = @. (kz*mb1 - kx*mb3)
+  vB3h = @. (kx*mb2 - ky*mb1)
+
+  # second k×(k×B₀) vector
+  vvB1h = @. (ky.*vB3h .- kz.*vB2h)*k⁻²
+  vvB2h = @. (kz.*vB1h .- kx.*vB3h)*k⁻²
+  vvB3h = @. (kx.*vB2h .- ky.*vB1h)*k⁻²
+ 
+  @. B1sh = ( B1h*vvB1h + B2h*vvB2h + B3h*vvB3h )*vvB1h
+  @. B2sh = ( B1h*vvB1h + B2h*vvB2h + B3h*vvB3h )*vvB2h
+  @. B3sh = ( B1h*vvB1h + B2h*vvB2h + B3h*vvB3h )*vvB3h
+
+  ldiv!(B1s, grid.rfftplan, B1sh)  
+  ldiv!(B2s, grid.rfftplan, B2sh)
+  ldiv!(B3s, grid.rfftplan, B3sh)
+
+  return B1s,B2s,B3s
+end
+
+function AlfvenMode(B1,B2,B3,mb,grid)
+  #funtion of computing ALf mode of B-field B_a using the fourier method
+  # where B_a = \vec{B} ⋅ \vec(k×B₀)
+  nx,ny,nz = size(B1)
+  dev = typeof(B1) <: Array ? CPU() : GPU()
+  T   = eltype(grid)
+
+  @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h B1ah B2ah B3ah
+  @devzeros typeof(dev)         T  (         nx,ny,nz) B1a B2a B3a
+
+  k⁻¹ = sqrt.(grid.invKrsq)
+  mb1,mb2,mb3 = mb  
 
   mul!(B1h, grid.rfftplan, B1) 
   mul!(B2h, grid.rfftplan, B2) 
   mul!(B3h, grid.rfftplan, B3)
   
   kx,ky,kz = grid.kr,grid.l,grid.m 
-  # first k×B
-  @. CB1h = im*(ky*B3h - kz*B2h)
-  @. CB2h = im*(kz*B1h - kx*B3h)
-  @. CB3h = im*(kx*B2h - ky*B1h)
-  # second k×(k×B)
-  @. B1h = im*(ky*CB3h - kz*CB2h)
-  @. B2h = im*(kz*CB1h - kx*CB3h)
-  @. B3h = im*(kx*CB2h - ky*CB1h)
-  
-  ldiv!(B1s, grid.rfftplan, B1h)  
-  ldiv!(B2s, grid.rfftplan, B2h)
-  ldiv!(B3s, grid.rfftplan, B3h)
-  return cB1,cB2,cB3
+  # first k×B₀ vector
+  vB1h = @. (ky*mb3 - kz*mb2)*k⁻¹
+  vB2h = @. (kz*mb1 - kx*mb3)*k⁻¹
+  vB3h = @. (kx*mb2 - ky*mb1)*k⁻¹
+
+  @. B1ah = ( B1h*vB1h + B2h*vB2h + B3h*vB3h )*vB1h
+  @. B2ah = ( B1h*vB1h + B2h*vB2h + B3h*vB3h )*vB2h
+  @. B3ah = ( B1h*vB1h + B2h*vB2h + B3h*vB3h )*vB3h
+
+  ldiv!(B1a, grid.rfftplan, B1ah)  
+  ldiv!(B2a, grid.rfftplan, B2ah)
+  ldiv!(B3a, grid.rfftplan, B3ah)
+
+  return B1a, B2a, B3a
 end

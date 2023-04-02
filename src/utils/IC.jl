@@ -115,9 +115,9 @@ function SetUpProblemIC!(prob;  ρ = [],
       copyto!(vars.bx, bx)  
       copyto!(vars.by, by)  
       copyto!(vars.bz, bz)  
-      mul!(@views sol[:, :, :, bx_ind], grid.rfftplan, as[1])
-      mul!(@views sol[:, :, :, by_ind], grid.rfftplan, as[2])
-      mul!(@views sol[:, :, :, bz_ind], grid.rfftplan, as[3])
+      mul!(@views sol[:, :, :, bx_ind], grid.rfftplan, CuArray(as[1]))
+      mul!(@views sol[:, :, :, by_ind], grid.rfftplan, CuArray(as[2]))
+      mul!(@views sol[:, :, :, bz_ind], grid.rfftplan, CuArray(as[3]))
 
     else
       bs = Array{T, 3}[] 
@@ -128,9 +128,9 @@ function SetUpProblemIC!(prob;  ρ = [],
       copyto!(vars.bx, bs[1])  
       copyto!(vars.by, bs[2])  
       copyto!(vars.bz, bs[3])  
-      mul!(@views sol[:, :, :, params.bx_ind], grid.rfftplan, ax)
-      mul!(@views sol[:, :, :, params.by_ind], grid.rfftplan, ay)
-      mul!(@views sol[:, :, :, params.bz_ind], grid.rfftplan, az)
+      mul!( (@views sol[:, :, :, params.bx_ind]), grid.rfftplan, CuArray(ax))
+      mul!( (@views sol[:, :, :, params.by_ind]), grid.rfftplan, CuArray(ay))
+      mul!( (@views sol[:, :, :, params.bz_ind]), grid.rfftplan, CuArray(az))
     end
 
   end

@@ -194,11 +194,9 @@ function AᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     @warn "Warning : Unknown direction is declerad"
   end
 
-  @. ∂Aᵢh∂t*= 0
+  @. ∂Aᵢh∂t .= 0
   ε_ijkuⱼbₖ  = vars.nonlin1        
   ε_ijkuⱼbₖh = vars.nonlinh1
-
-  @. ∂Aᵢh∂t *= 0 
 
   # compute the term v × B =  ε_ijk v_j b_k
   for (uⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(1,2,3))
@@ -417,7 +415,7 @@ function UpdateΦ!(sol, vars, params, grid)
   k⁻² = grid.invKrsq
   Φh  = vars.Φh
 
-  @. Φh*= 0
+  @. Φh .= 0
   ε_ijkuⱼbₖ  = vars.nonlin1        
   ε_ijkuⱼbₖh = vars.nonlinh1
 

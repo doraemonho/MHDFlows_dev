@@ -136,7 +136,7 @@ function Equation_with_forcing(dev, grid; B = false, A = false, E = false, C = f
     if E
       Nₗ = 3  
     else
-      Nₗ = ifelse( (B || A ), 6, 3)
+      Nₗ = ifelse( ( B || A ), 6, 3)
     end
   end
   if C
@@ -189,9 +189,9 @@ end
 function HDcalcN!(N, sol, t, clock, vars, params, grid)
   dealias!(sol, grid)
 
-  addforcing!(N, sol, t, clock, vars, params, grid)
-  
   HDSolver.HDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+
+  addforcing!(N, sol, t, clock, vars, params, grid)
   
   return nothing
 end

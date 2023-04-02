@@ -135,19 +135,19 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
 
 	end
 
-  @. ∂Bᵢh∂t*= 0;
-  uᵢbⱼ_minus_bᵢuⱼ  = vars.nonlin1;        
-  uᵢbⱼ_minus_bᵢuⱼh = vars.nonlinh1;
+  @. ∂Bᵢh∂t*= 0
+  uᵢbⱼ_minus_bᵢuⱼ  = vars.nonlin1        
+  uᵢbⱼ_minus_bᵢuⱼh = vars.nonlinh1
   #Compute the first term, im ∑_j k_j*(b_iu_j - u_ib_j)
   for (bⱼ,uⱼ,kⱼ,j) ∈ zip((vars.bx,vars.by,vars.bz),(vars.ux,vars.uy,vars.uz),(grid.kr,grid.l,grid.m),(1,2,3))
     if a != j
       # Perform Computation in Real space
-      @. uᵢbⱼ_minus_bᵢuⱼ = uᵢ*bⱼ - bᵢ*uⱼ;
+      @. uᵢbⱼ_minus_bᵢuⱼ = uᵢ*bⱼ - bᵢ*uⱼ
       
       mul!(uᵢbⱼ_minus_bᵢuⱼh, grid.rfftplan, uᵢbⱼ_minus_bᵢuⱼ);
 
       # Perform the Actual Advection update
-      @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼ_minus_bᵢuⱼh;  
+      @. ∂Bᵢh∂t += im*kⱼ*uᵢbⱼ_minus_bᵢuⱼh  
 
     end
   end
@@ -160,11 +160,68 @@ function BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   #Compute the diffusion term  - ηk^2 B_i
   bᵢh = vars.nonlinh1;
   mul!(bᵢh, grid.rfftplan, bᵢ); 
-  @. ∂Bᵢh∂t += -grid.Krsq*params.η*bᵢh;
+  @. ∂Bᵢh∂t += -grid.Krsq*params.η*bᵢh
     
     return nothing
 
 end
+
+# Vector Potential function instead of magnetic field (coulomb guage version)
+function AᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+  #To Update A_i, we have two terms to compute:
+  # ∂A_i/∂t = v × B - η ∇ × B - ∇Φ
+
+
+ # declare the var u_i, b_i for computation
+  if direction == "x"
+    i   = 1
+    kᵢ  = grid.kr
+    Jᵢh    = vars.jxh
+    ∂Aᵢh∂t = @view N[:,:,:,params.bx_ind];
+
+  elseif direction == "y"
+    i   = 2;
+    kᵢ  = grid.l;
+    Jᵢh    = vars.jyh
+    ∂Aᵢh∂t = @view N[:,:,:,params.by_ind];
+
+  elseif direction == "z"
+    i   = 3;
+    kᵢ  = grid.m;
+    Jᵢh    = vars.jzh
+    ∂Aᵢh∂t = @view N[:,:,:,params.bz_ind];
+  else
+    @warn "Warning : Unknown direction is declerad"
+  end
+
+  @. ∂Aᵢh∂t*= 0
+  ε_ijkuⱼbₖ  = vars.nonlin1        
+  ε_ijkuⱼbₖh = vars.nonlinh1
+
+  @. ∂Aᵢh∂t *= 0 
+
+  # compute the term v × B =  ε_ijk v_j b_k
+  for (uⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(1,2,3))
+    for (bₖ,k) ∈ zip((vars.bx,vars.by,vars.bz),(1,2,3))
+      if ϵ(i,j,k) > 0.0
+        ϵ_ijk = ϵ(i,j,k)
+        @. ε_ijkuⱼbₖ = ϵ_ijk*uⱼ*bₖ
+        mul!(ε_ijkuⱼbₖh, grid.rfftplan, ε_ijkuⱼbₖ)
+        @. ∂Aᵢh∂t += ε_ijkuⱼbₖh
+      end
+    end
+  end
+
+  # compute η ∇ × B
+  @. ∂Aᵢh∂t -= params.η*Jᵢh
+
+  # compute the ∇Φ term using ∇²Φ = ∇⋅(v×B - ηJ) 
+  @. ∂Aᵢh∂t -= kᵢ*vars.Φh
+
+  return nothing 
+
+end
+
 
 # B function for EMHD system
 # For E-MHD system, the induction will be changed into
@@ -273,21 +330,7 @@ function Get∇XB!(sol, vars, params, grid)
   A₂  = vars.∇XBⱼ
   A₃  = vars.∇XBₖ
 
-  # Way 1  of appling Curl
-  #=∇XBₖh = vars.nonlinh1
-  for (∇XBₖ ,k) ∈ zip((A₁,A₂,A₃),(1,2,3))
-    @. ∇XBₖh*=0
-    for (Bⱼh,j)  ∈ zip((B₁h,B₂h,B₃h),(1,2,3))
-      for (kᵢ,i)  ∈ zip((k₁,k₂,k₃),(1,2,3))
-        if ϵ(i,j,k) != 0
-          @. ∇XBₖh += im*ϵ(i,j,k)*kᵢ*Bⱼh
-        end
-      end
-    end
-    ldiv!(∇XBₖ, grid.rfftplan, deepcopy( ∇XBₖh))
-  end=#
-
-  # Way 2  of appling Curl
+  # Way 2 of appling Curl
   CBᵢh = vars.nonlinh1
   @. CBᵢh = im*(k₂*B₃h - k₃*B₂h)
   ldiv!(A₁, grid.rfftplan, CBᵢh)  
@@ -300,6 +343,108 @@ function Get∇XB!(sol, vars, params, grid)
 
   return nothing
 end
+
+# Compute the B from ∇XA term
+function UpdateB!(sol, vars, params, grid)
+
+  # ∇XB = im*( k × B )ₖ = im*ϵ_ijk kᵢ Bⱼ
+
+  # define the variables
+  k₁,k₂,k₃ = grid.kr,grid.l,grid.m;
+  A₁h = @view sol[:,:,:,params.bx_ind]
+  A₂h = @view sol[:,:,:,params.by_ind]
+  A₃h = @view sol[:,:,:,params.bz_ind]
+  B₁  = vars.bx
+  B₂  = vars.by
+  B₃  = vars.bz
+
+  # Way 2  of appling Curl
+  CBᵢh = vars.nonlinh1
+  @. CBᵢh = im*(k₂*A₃h - k₃*A₂h)
+  ldiv!(B₁, grid.rfftplan, CBᵢh)  
+
+  @. CBᵢh = im*(k₃*A₁h - k₁*A₃h)
+  ldiv!(B₂, grid.rfftplan, CBᵢh) 
+
+  @. CBᵢh = im*(k₁*A₂h - k₂*A₁h)
+  ldiv!(B₃, grid.rfftplan, CBᵢh)  
+
+  return nothing
+end
+
+function UpdateJ!(sol, vars, params, grid)
+
+  # ∇XB = im*( k × B )ₖ = im*ϵ_ijk kᵢ Bⱼ
+
+  # define the variables
+  k₁,k₂,k₃ = grid.kr,grid.l,grid.m;
+  A₁h = @view sol[:,:,:,params.bx_ind]
+  A₂h = @view sol[:,:,:,params.by_ind]
+  A₃h = @view sol[:,:,:,params.bz_ind]
+
+  B₁,   B₂,  B₃  =  vars.bx,  vars.by,  vars.bz
+  J₁h, J₂h, J₃h  = vars.jxh, vars.jyh, vars.jzh
+  @. J₁h *= 0 
+  @. J₂h *= 0 
+  @. J₃h *= 0
+
+  B₁h = B₂h = B₃h = vars.nonlinh1
+  mul!(B₁h, grid.rfftplan, B₁)
+  @. J₃h -= im*k₂*B₁h
+  @. J₂h += im*k₃*B₁h
+
+  mul!(B₂h, grid.rfftplan, B₂)
+  @. J₁h -= im*k₃*B₂h
+  @. J₃h += im*k₁*B₂h
+
+  mul!(B₃h, grid.rfftplan, B₃)
+  @. J₁h -= im*k₃*B₂h
+  @. J₂h += im*k₃*B₁h
+
+  #@. J₁h = im*(k₂*B₃h - k₃*B₂h) #@. J₂h = im*(k₃*B₁h - k₁*B₃h) #@. J₃h = im*(k₁*B₂h - k₂*B₁h)
+
+  return nothing
+end
+
+function UpdateΦ!(sol, vars, params, grid)
+
+  # Φ term to conserve the coulomb gauge
+  # compute it using 
+  # k²*Φh = ∑ᵢ kᵢ( (v×B)ᵢ - ηJᵢ ) 
+
+  # define the variables
+  k₁,k₂,k₃ = grid.kr,grid.l,grid.m
+  k⁻² = grid.invKrsq
+  Φh  = vars.Φh
+
+  @. Φh*= 0
+  ε_ijkuⱼbₖ  = vars.nonlin1        
+  ε_ijkuⱼbₖh = vars.nonlinh1
+
+  #compute  ∑ᵢ kᵢ( (v×B)ᵢ - ηJᵢ ) term 
+  for (Jᵢh,kᵢ,i) ∈ zip((vars.jxh,vars.jyh,vars.jzh),(k₁,k₂,k₃),(1,2,3))
+    # compute the term v × B term using einstein notation
+    for (uⱼ,j) ∈ zip((vars.ux,vars.uy,vars.uz),(1,2,3))
+      for (bₖ,k) ∈ zip((vars.bx,vars.by,vars.bz),(1,2,3))
+        if ϵ(i,j,k) > 0.0
+          ϵ_ijk = ϵ(i,j,k)
+          @. ε_ijkuⱼbₖ = ϵ_ijk*uⱼ*bₖ
+          mul!(ε_ijkuⱼbₖh, grid.rfftplan, ε_ijkuⱼbₖ)
+          @. Φh += kᵢ*ε_ijkuⱼbₖh
+        end
+      end
+    end
+    # compute η ∇ × B term
+    @. Φh += kᵢ*params.η*Jᵢh
+  end
+
+  # compute ∑ᵢ kᵢ( (v×B)ᵢ - ηJᵢ )/k²
+  @. Φh *= k⁻² 
+
+  return nothing
+end
+
+
 
 function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
@@ -336,6 +481,31 @@ function MHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
   BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
   BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z"); 
+
+  return nothing
+end
+
+function AMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+
+  #Update V + B Real Conponment
+  ldiv!(vars.ux, grid.rfftplan, deepcopy(@view sol[:, :, :, params.ux_ind]));
+  ldiv!(vars.uy, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uy_ind]));
+  ldiv!(vars.uz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.uz_ind]));
+  UpdateB!(sol, vars, params, grid);
+
+  #Upadte Φ and J in spectral space
+  UpdateΦ!(sol, vars, params, grid);
+  UpdateJ!(sol, vars, params, grid);
+
+  #Update V Advection
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
+  UᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z");
+
+  #Update B Advection
+  AᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x");
+  AᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y");
+  AᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z"); 
 
   return nothing
 end

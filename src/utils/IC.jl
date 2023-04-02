@@ -40,6 +40,7 @@ function of setting up the initial condition of the problem
 """
 function SetUpProblemIC!(prob;  ρ = [],
                                ux = [], uy = [], uz =[],
+                               ax = [], ay = [], az =[],
                                bx = [], by = [], bz =[],
                                U₀x= [], U₀y= [], U₀z=[],
                                B₀x= [], B₀y= [], B₀z=[])
@@ -66,6 +67,8 @@ function SetUpProblemIC!(prob;  ρ = [],
   end
 
   # Copy the data to both output and solution array
+
+  # check if EMHD turned on, if not, copy u-field data
   if !prob.flag.e
     for (uᵢ,prob_uᵢ,uᵢind) in zip([ux,uy,uz],[vars.ux,vars.uy,vars.uz],
                                   [params.ux_ind,params.uy_ind,params.uz_ind])
@@ -80,6 +83,7 @@ function SetUpProblemIC!(prob;  ρ = [],
       end
     end
   end
+  # inject magnetic field
   if prob.flag.b 
     for (bᵢ,prob_bᵢ,bᵢind) in zip([bx,by,bz],[vars.bx,vars.by,vars.bz],
                                   [params.bx_ind,params.by_ind,params.bz_ind])
@@ -90,6 +94,47 @@ function SetUpProblemIC!(prob;  ρ = [],
       end
     end
   end
+
+  # inject A/B field
+  if prob.flag.a 
+    nx,ny,nz = prob.grid.nx,prob.grid.ny,prob.grid.nz
+    T        = eltype(prob.grid)
+    _inject_a_ = false
+    for (aᵢ,bᵢ) in zip([ax,ay,az],[bx,by,bz])
+      # check if both ai and bi is filled
+      @assert !( aᵢ != [] && bᵢ != [])
+      _inject_a_ = aᵢ != [] ? true : false
+    end
+
+    if _inject_a_
+       as = Array{T, 3}[] 
+      for aᵢ ∈ [ax,ay,az]
+        aᵢ == [] ? push!(as,zeros(T, (nx,ny,nz))) : push!(as, aᵢ) 
+      end
+      bx,by,bz = Curl(as[1],as[2],as[3])
+      copyto!(vars.bx, bx)  
+      copyto!(vars.by, by)  
+      copyto!(vars.bz, bz)  
+      mul!(@views sol[:, :, :, bx_ind], grid.rfftplan, as[1])
+      mul!(@views sol[:, :, :, by_ind], grid.rfftplan, as[2])
+      mul!(@views sol[:, :, :, bz_ind], grid.rfftplan, as[3])
+
+    else
+      bs = Array{T, 3}[] 
+      for bᵢ ∈ [bx,by,bz]
+        bᵢ == [] ? push!(bs,zeros(T, (nx,ny,nz))) : push!(bs, bᵢ) 
+      end
+      ax,ay,az = VectorPotential(bs[1],bs[2],bs[3])
+      copyto!(vars.bx, bs[1])  
+      copyto!(vars.by, bs[2])  
+      copyto!(vars.bz, bs[3])  
+      mul!(@views sol[:, :, :, params.bx_ind], grid.rfftplan, ax)
+      mul!(@views sol[:, :, :, params.by_ind], grid.rfftplan, ay)
+      mul!(@views sol[:, :, :, params.bz_ind], grid.rfftplan, az)
+    end
+
+  end
+
   if prob.flag.vp
     for (Uᵢ,prob_Uᵢ) in zip([U₀x,U₀y,U₀z],
                             [params.U₀x,params.U₀y,params.U₀z])
@@ -107,8 +152,6 @@ function SetUpProblemIC!(prob;  ρ = [],
   return nothing;
   
 end
-
-
 """
     DivFreeSpectraMap(Nx,Ny,Nz)
 

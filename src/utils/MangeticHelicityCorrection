@@ -4,14 +4,20 @@
 
 
 # function of correction the B-field to conserve the Hm
-function HmCorrection!(prob)
+function HmCorrection!(prob; ε = 1f-4)
   
+  # define the variables for iteration
+
   # some preparation work for computing ΔH, C0, C1 D, λ₀
 
-
+  H  = ....;
+  C₀ = 2 *square_mean(bxh,byh,bzh)
+  @. C₁ = bxh^2 + byh^2 + bzh^2 + (Jxh,Jyh,Jzh)⋅(Axh,Ayh,Azh) - C₀  
+  @. ΔH = H - H0 
+  @. λₙ = ΔH/2(C₀ .+ C₁)
 
   # compute the err 
-
+  err = 1.0
 
   # iterate the λ until the err is converge 
   @. λ_next = 0
@@ -25,6 +31,7 @@ function HmCorrection!(prob)
         @. λ_next += ...; 
       end
     end
+    Δλ = @. λ_next .- λₙ  
     # compute the error 
     err = ...
 
@@ -35,9 +42,10 @@ function HmCorrection!(prob)
 
   end
 
-
   # work out the A' = A + δA and then compute the B' = ∇ × A'
 
+  # data movement for next iteration
+  copyto!(H₀,H)
 
   return nothing 
 

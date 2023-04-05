@@ -1,0 +1,44 @@
+# ----------
+# Module For Magnetic helicity correction scheme, Ref : Zenati & Vishniac 2021
+# ----------
+
+
+# function of correction the B-field to conserve the Hm
+function HmCorrection!(prob)
+  
+  # some preparation work for computing ΔH, C0, C1 D, λ₀
+
+
+
+  # compute the err 
+
+
+  # iterate the λ until the err is converge 
+  @. λ_next = 0
+  while err > ε
+
+    # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
+
+    # compute λₙ₊₁ from eq. 25 of the paper
+    for kᵢ ∈ (k1,k2,k3)
+      for kⱼ ∈ (k1,k2,k3)
+        @. λ_next += ...; 
+      end
+    end
+    # compute the error 
+    err = ...
+
+    # data movement for next iteration
+    copyto!(λₙ, λ_next)
+
+    @. λ_next  = 0
+
+  end
+
+
+  # work out the A' = A + δA and then compute the B' = ∇ × A'
+
+
+  return nothing 
+
+end

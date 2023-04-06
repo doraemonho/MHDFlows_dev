@@ -18,10 +18,29 @@
 # im for dddd!
 
 
+#ideal beofre equation 24, all the stuff is in real-space
+# but k-spacein eq 25
+
+mutable struct Hm{Atrans,Aphys}
+  D₀ :: Aphys
+  H  :: Aphys
+  Hh :: Aphys
+  H₀h:: Atrans
+  λ  :: Aphys
+  λh :: Atrans
+  k₁ :: Atrans
+  k₂ :: Atrans
+  k₃ :: Atrans 
+end
+
+
 # function of correction the B-field to conserve the Hm
 function HmCorrection!(prob; ε = 1f-4)
   L1_err_max(A,B) =  mapreduce(x->√(x*x - y*y),max,A,B)
   # define the variables for iteration
+  grid = prob.grid
+  vars = prob.vars
+  params = prob.params
 
   # ---------------------------- step 1. ------------------------------------#
   # some preparation work for computing ΔH, C0, C1 D, λ₀, real of i space?
@@ -42,13 +61,13 @@ function HmCorrection!(prob; ε = 1f-4)
   ldiv!(Az, grid.rfftplan, deepcopy(Azh))
 
   # Compute the magnetic helicity 
-  H  = (Axh,Ayh,Azh) ⋅ (Bxh,Byh,Bzh)
+  Hh  = (Axh,Ayh,Azh) ⋅ (Bxh,Byh,Bzh)
 
   # Real or imag space? Should be real space? but Cᵢ is imag space?
   C₀ = 2 *square_mean(bx,by,bz)
-  @. C₁ = bx^2 + by^2 + bz^2 + (Jx,Jy,Jz)⋅(Ax,Ay,Az) - C₀  
-  @. ΔH = H - H₀ # imag space
-  @. λₙ = ΔH/2/(C₀ .+ C₁)
+  @. C₁  = bx^2 + by^2 + bz^2 + (Jx,Jy,Jz)⋅(Ax,Ay,Az) - C₀  
+  @. ΔHh = Hh - H₀h # imag space
+  @. λₙh = ΔHh/2/(C₀ .+ C₁)
   ComputeD₀D₁!(D₀, D₁, Axh, Ayh, Azh, grid, vars)
 
   # ---------------------------- step 2. ------------------------------------#
@@ -68,14 +87,15 @@ function HmCorrection!(prob; ε = 1f-4)
       for (kⱼ,j) ∈ zip((k1,k2,k3), (1,2,3))
         Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λ, @views D₁[i,j], 
                                  params, vars, grid)
-        @. λ_next += (@. ΔH + -2*C₁*λₙ + ∂ᵢD₁ᵢⱼ∂ⱼλₙh + ∇∇²∇λBh)/(@. 2*C₀ + kᵢ*kⱼ*D₀[i,j]); 
+        # This also doesnt work C₁*λₙ should be not like this
+        @. λh_next += (@. ΔHh + -2*C₁*λₙ + ∂ᵢD₁ᵢⱼ∂ⱼλₙh + ∇∇²∇λBh)/(@. 2*C₀ + kᵢ*kⱼ*D₀[i,j]); 
       end
     end
     # compute the rms error 
     err = L1_err_max(λ_next,λₙ)
 
     # data movement for next iteration
-    copyto!(λₙ, λ_next)
+    copyto!(λhₙ, λh_next)
 
     @. λ_next  = 0
 
@@ -93,6 +113,8 @@ function HmCorrection!(prob; ε = 1f-4)
 
 end
 
+
+# It is wrong, we have to do imag -> real
 function Get_the_∇∇²∇λB_term!(∇∇²∇λBh, λ, 
                                 bxh, byh, bzh, bx ,by ,bz,
                                 params, vars, grid)
@@ -152,29 +174,27 @@ function ComputeD₀D₁!(D₀, D₁, Ax, Ay, Az, grid, vars)
 end
 
 # define the vars..
-function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λ, D₁ᵢⱼ, params, vars, grid)
+function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λh, D₁ᵢⱼ, kᵢ, kⱼ, params, vars, grid)
   
   @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh = 0  
   @. ∂ᵢD₁ᵢⱼ∂ⱼλₙ  = 0
 
-  ∂ⱼλₙh = kⱼ*λ
+  ∂ⱼλₙh = im*kⱼ*λh
 
   ldiv!(∂ⱼλₙ, grid.rfftplan, ∂ⱼλₙh)
 
-  @. D₁ᵢⱼ∂ⱼλₙh = D₁ᵢⱼ*∂ⱼλₙ
+  @. D₁ᵢⱼ∂ⱼλₙ = D₁ᵢⱼ*∂ⱼλₙ
 
-  @. ∂ᵢD₁ᵢⱼ∂ⱼλₙ = kᵢ*D₁ᵢⱼ∂ⱼλₙh
+  mul!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, grid.rfftplan, D₁ᵢⱼ∂ⱼλₙ)
 
-  mul!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, grid.rfftplan, ∂ᵢD₁ᵢⱼ∂ⱼλₙ)
+  @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh = im*kᵢ*∂ᵢD₁ᵢⱼ∂ⱼλₙh
 
   return nothing 
 end
 
-function ComputeδB!(λ, Ax, Ay, Az, Bx, By, Bz)
+# It seems that we should do this in real space
+function ComputeδB!(λh, Ax, Ay, Az, vars, params)
   # δA = ∇×(λA) + λB - ∇∇⁻²∇⋅λB
-  λBxh = @. λ*Bxh
-  λByh = @. λ*Byh
-  λBzh = @. λ*Bzh
 
   # (?) Am I do this correctly?
   ∇⁻²∇λBh = -im*(kx*λ*Bxh + ky*λ*Byh + kz*λ*Bzh)*k⁻²

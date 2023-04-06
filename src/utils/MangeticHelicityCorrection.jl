@@ -183,10 +183,10 @@ end
 # define the vars..
 function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λh, D₁ᵢⱼ, kᵢ, kⱼ, params, vars, grid)
   # 2 real and 2 imag sketch array
-  ∂ᵢD₁ᵢⱼ∂ⱼλₙh, ∂ⱼλₙh = ...  
-  ∂ⱼλₙ   = vars.nonlin1
+  ∂ⱼλₙh = ∂ᵢD₁ᵢⱼ∂ⱼλₙh = vars.nonlinh1  
+  ∂ⱼλₙ  = vars.nonlin1
 
-  ∂ⱼλₙh = im*kⱼ*λh
+  @. ∂ⱼλₙh = im*kⱼ*λh
 
   ldiv!(∂ⱼλₙ, grid.rfftplan, ∂ⱼλₙh)
 

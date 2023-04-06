@@ -9,13 +9,7 @@
 
 # im for dddd!
 
-
-# im for dddd!
-
-# im for dddd!
-
-
-# im for dddd!
+Question remain : which I should declare and which I dont?
 
 
 #ideal beofre equation 24, all the stuff is in real-space
@@ -36,11 +30,36 @@ end
 
 # function of correction the B-field to conserve the Hm
 function HmCorrection!(prob; ε = 1f-4)
-  L1_err_max(A,B) =  mapreduce(x->√(x*x - y*y),max,A,B)
+  L1_err_max(dA) =  mapreduce(x->√(x*x), max, dA)
+
+  # ---------------------------- step 0. ------------------------------------#
   # define the variables for iteration
+  sol  = prob.sol
   grid = prob.grid
   vars = prob.vars
   params = prob.params
+
+  @views bxh,byh,bzh = sol[:,:,params.bx_ind], sol[:,:,params.by_ind], sol[:,:,params.bz_ind]
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]));
+  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]));
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])); 
+  bx , by, bz = vars.bx, vars.by, vars.bz
+
+  # define the sketch variables
+  # - imag space sketch variables
+  Jxh, Jyh, Jzh = ...
+  Axh, Ayh, Azh = ...
+  Hh, ΔHh       = ...
+  λh_next, λₙh  = ...
+  ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = ...
+  C₁λₙh = ...
+  # - real space sketch variables
+  Jx, Jy, Jz = ...
+  Ax, Ay, Az = ...
+  λ  = ...
+  D₁ = .... # is something 9*9
+  D₀ = ....
+  C₁ = ....
 
   # ---------------------------- step 1. ------------------------------------#
   # some preparation work for computing ΔH, C0, C1 D, λ₀, real of i space?
@@ -61,7 +80,7 @@ function HmCorrection!(prob; ε = 1f-4)
   ldiv!(Az, grid.rfftplan, deepcopy(Azh))
 
   # Compute the magnetic helicity 
-  Hh  = (Axh,Ayh,Azh) ⋅ (Bxh,Byh,Bzh)
+  Hh  = (Axh,Ayh,Azh) ⋅ (bxh,byh,bzh)
 
   # Real or imag space? Should be real space? but Cᵢ is imag space?
   C₀ = 2 *square_mean(bx,by,bz)
@@ -74,30 +93,37 @@ function HmCorrection!(prob; ε = 1f-4)
   # compute the err and iterate the λ until the err is converge 
   err = 1.0
 
-  @. λ_next = 0
+  @. λh_next = 0
   while err > ε
 
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
-    Get_the_∇∇²∇λB_term!(∇∇²∇λBh, λ, 
+    Get_the_∇∇²∇λB_term!(∇∇²∇λBh, λₙ, 
                            bxh, byh, bzh, bx ,by ,bz,
                            params, vars, grid)
+
+    # compute the C₁λₙ term
+    @. C₁λₙ = C₁*λₙ 
+    ldiv!(λₙ, grid.rfftplan, λhₙ)
+    mul!(C₁λₙh, grid.rfftplan, C₁λₙ)
 
     # Implicit summation for computing λₙ₊₁ from eq. 25 in the paper
     for (kᵢ,i) ∈ zip((k1,k2,k3), (1,2,3))
       for (kⱼ,j) ∈ zip((k1,k2,k3), (1,2,3))
         Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λ, @views D₁[i,j], 
-                                 params, vars, grid)
-        # This also doesnt work C₁*λₙ should be not like this
-        @. λh_next += (@. ΔHh + -2*C₁*λₙ + ∂ᵢD₁ᵢⱼ∂ⱼλₙh + ∇∇²∇λBh)/(@. 2*C₀ + kᵢ*kⱼ*D₀[i,j]); 
+                                 params, vars, grid) 
+        @. λh_next += (@. ΔHh -2*C₁λₙh + ∂ᵢD₁ᵢⱼ∂ⱼλₙh + ∇∇²∇λBh)/(@. 2*C₀ + kᵢ*kⱼ*D₀[i,j]); 
       end
     end
-    # compute the rms error 
-    err = L1_err_max(λ_next,λₙ)
+
+    # compute the rms error, may have to switch to real space
+    @. Δλh = λh_next - λₙh
+    ldiv!(Δλ, grid.rfftplan, Δλh)
+    err = L1_err_max(Δλ)
 
     # data movement for next iteration
     copyto!(λhₙ, λh_next)
 
-    @. λ_next  = 0
+    @. λh_next  = 0
 
   end
 
@@ -107,7 +133,7 @@ function HmCorrection!(prob; ε = 1f-4)
 
 
   # data movement for next iteration
-  copyto!(H₀,H)
+  copyto!(H₀h,H)
 
   return nothing 
 
@@ -116,7 +142,7 @@ end
 
 # It is wrong, we have to do imag -> real
 function Get_the_∇∇²∇λB_term!(∇∇²∇λBh, λ, 
-                                bxh, byh, bzh, bx ,by ,bz,
+                                bx ,by ,bz,
                                 params, vars, grid)
 
 #define the vars...
@@ -126,12 +152,16 @@ function Get_the_∇∇²∇λB_term!(∇∇²∇λBh, λ,
   @.∇⁻²∇λBh  *= 0 
   @.∇∇²∇λBh *= 0
   k⁻² = grid.invKrsq;
-  for (kᵢ,bᵢh) ∈ zip((kx,ky,kz),(bxh,byh,bzh))
-    ∇⁻²∇λBh += kᵢ*bᵢh*k⁻²
+  for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))
+    @. λbᵢ = λ*bᵢ
+    mul!(λbᵢh, grid.rfftplan, λbᵢ)
+    ∇⁻²∇λBh += im*kᵢ*λbᵢh*k⁻²
   end
 
   for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))
-    ∂ᵢ∇⁻²∇λBh = ∇⁻²∇λBh*kᵢ
+    
+    ∂ᵢ∇⁻²∇λBh = im*kᵢ*∇⁻²∇λBh
+
     ldiv!(∂ᵢ∇⁻²∇λB, grid.rfftplan,∇⁻²∇λBh)
 
     ∂ᵢ∇⁻²∇λB = bᵢ*∂ᵢ∇⁻²∇λB

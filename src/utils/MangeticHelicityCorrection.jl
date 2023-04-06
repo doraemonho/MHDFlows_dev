@@ -11,6 +11,12 @@ mutable struct Hm{Atrans,Aphys}
 end
 
 
+#--------------
+function construct_function_for_struct()
+  
+end
+
+
 # function of correction the B-field to conserve the Hm
 function HmCorrection!(prob; ε = 1f-4)
   square_mean(A,B,C) = mapreduce((x,y,z)->x*x+y*y+z*z,+,A,B,C)/length(A)
@@ -83,7 +89,7 @@ function HmCorrection!(prob; ε = 1f-4)
   #ComputeD₀D₁!(D₀, D₁, Axh, Ayh, Azh, grid, vars)
 
   # ---------------------------- step 2. ------------------------------------#
-  # compute the err and iterate the λ until the err is converge 
+  # compute the err and iterate the λ until it is converge 
   err = 1.0
 
   @. λh_next = 0

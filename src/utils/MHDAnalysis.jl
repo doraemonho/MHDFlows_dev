@@ -253,7 +253,18 @@ function spectralline(A::Array{T,3};Lx=2π) where T
   return Pk,kr
 end
 
-#------------------------ mode analysis --------------------------------------#
+#-------------------------------- mode analysis --------------------------------------#
+
+"""
+    SlowMode(U1,U2,U3,B1,B2,B3)
+
+function of decomposing the slow mode
+  Keyword arguments
+=================
+- `B1/B2/B3` : B-field in real space
+- `U1/U1/U1` : target vecotr-field in to be decomposed (V/B)
+- `Lx/Ly/Lz` : Box Scale
+"""
 function SlowMode(U1::Array,U2::Array,U3::Array, B1::Array,B2::Array,B3::Array;
               Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     
@@ -264,11 +275,21 @@ function SlowMode(U1::Array,U2::Array,U3::Array, B1::Array,B2::Array,B3::Array;
     mb1,mb2,mb3 = mb1/mbb,mb2/mbb,mb3/mbb
     
     nx,ny,nz = size(B1);
-    grid = MHDFlows.GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
+    grid = MHDFlows.GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = eltype(U1));
     B1s,B2s,B3s = SlowMode(U1,U2,U3, (mb1,mb2,mb3), grid)
     return B1s,B2s,B3s;
 end
 
+"""
+    AlfvenMode(U1,U2,U3,B1,B2,B3)
+
+function of decomposing the Alfvenic mode
+  Keyword arguments
+=================
+- `B1/B2/B3` : B-field in real space
+- `U1/U1/U1` : target vecotr-field in to be decomposed (V/B)
+- `Lx/Ly/Lz` : Box Scale
+"""
 function AlfvenMode(U1::Array,U2::Array,U3::Array, B1::Array,B2::Array,B3::Array;
                    Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
     
@@ -311,6 +332,7 @@ function SlowMode(B1,B2,B3,mb,grid)
   vvB2h = @. (kz.*vB1h .- kx.*vB3h)*k⁻²
   vvB3h = @. (kx.*vB2h .- ky.*vB1h)*k⁻²
  
+  # work out the \vec{B_s} = \vec{B} ⋅ \vec(k × (k×B₀))
   @. B1sh = ( B1h*vvB1h + B2h*vvB2h + B3h*vvB3h )*vvB1h
   @. B2sh = ( B1h*vvB1h + B2h*vvB2h + B3h*vvB3h )*vvB2h
   @. B3sh = ( B1h*vvB1h + B2h*vvB2h + B3h*vvB3h )*vvB3h
@@ -345,6 +367,7 @@ function AlfvenMode(B1,B2,B3,mb,grid)
   vB2h = @. (kz*mb1 - kx*mb3)*k⁻¹
   vB3h = @. (kx*mb2 - ky*mb1)*k⁻¹
 
+  # work out the  \vec{B_a} = \vec{B} ⋅ \vec(k×B₀)
   @. B1ah = ( B1h*vB1h + B2h*vB2h + B3h*vB3h )*vB1h
   @. B2ah = ( B1h*vB1h + B2h*vB2h + B3h*vB3h )*vB2h
   @. B3ah = ( B1h*vB1h + B2h*vB2h + B3h*vB3h )*vB3h

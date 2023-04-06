@@ -21,13 +21,13 @@ CheckON(Flag_equal_to_True::Bool) = Flag_equal_to_True ? string("ON") : string("
 
 function CheckON(FlagA::Bool, FlagB::Bool, FlagE::Bool) 
   if FlagB 
-    FlagE ? string("ON (EMHD)") : nothing
-    FlagA ? string("ON (Vector potential with Coulomb gauge)") : nothing
-            string("ON (Ideal MHD)")
+    if FlagE ; return string("ON (EMHD)"); end
+    if FlagA ; return string("ON (Vector potential with Coulomb gauge)"); end
+               return string("ON (Ideal MHD)")
   elseif FlagA
-    string("ON (Vector potential with Coulomb gauge)")
+    return string("ON (Vector potential with Coulomb gauge)")
   else
-    string("OFF")
+    return string("OFF")
   end
 
 end

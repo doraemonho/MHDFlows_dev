@@ -418,7 +418,8 @@ function UpdateΦ!(sol, vars, params, grid)
   @. Φh .= 0
   ε_ijkuⱼbₖ  = vars.nonlin1        
   ε_ijkuⱼbₖh = vars.nonlinh1
-
+  ε_ijkuⱼbₖ  .= 0 
+  ε_ijkuⱼbₖh .= 0 
   #compute  ∑ᵢ kᵢ( (v×B)ᵢ - ηJᵢ ) term 
   for (Jᵢh,kᵢ,i) ∈ zip((vars.jxh,vars.jyh,vars.jzh),(k₁,k₂,k₃),(1,2,3))
     # compute the term v × B term using einstein notation

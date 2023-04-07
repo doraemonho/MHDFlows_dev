@@ -2,26 +2,29 @@
 # Module For Magnetic helicity correction scheme, Ref : Zenati & Vishniac 2021
 # ----------
 
-# im for dddd!
-
-mutable struct Hm{Atrans,Aphys}
+mutable struct Hm_vars{Atrans,Aphys,Aphys4D}
   λₙ  :: Aphys
   H₀h :: Atrans
-  sk  :: Aphys
+  sk  :: Aphys4D
 end
 
+function construct_function_for_struct(::Dev,nx::Int,ny::Int,nz::Int; T = Float32) where Dev
 
-#--------------
-function construct_function_for_struct()
-  
+  @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz   ) H₀h
+  @devzeros Dev         T  (            nx , ny, nz   ) λₙ
+  @devzeros Dev         T  (            nx , ny, nz, 6) sk
+  Hm = Hm_vars(λₙ, H₀h, sk)
+
+  return Hm, HmCorrection!
 end
-
 
 # function of correction the B-field to conserve the Hm
+# note: this has a time constraint for weak field case from eq. 31
 function HmCorrection!(prob; ε = 1f-4)
   square_mean(A,B,C) = mapreduce((x,y,z)->x*x+y*y+z*z,+,A,B,C)/length(A)
   L1_err_max(dA) =  mapreduce(x->√(x*x), max, dA)
-
+  δ(a::Int,b::Int) = ( a == b ? 1 : 0 )
+    
   # ---------------------------- step 0. ------------------------------------#
   # define all the variables for iteration
   ts   = prob.timestepper
@@ -29,35 +32,39 @@ function HmCorrection!(prob; ε = 1f-4)
   grid = prob.grid
   vars = prob.vars
   params = prob.params
-
-  @views bxh,byh,bzh = sol[:,:,params.bx_ind], sol[:,:,params.by_ind], sol[:,:,params.bz_ind]
+  sk_arr1,sk_arr2 = ts.RHS₁,ts.RHS₂
+    
+  @views bxh,byh,bzh = sol[:,:,:,params.bx_ind], sol[:,:,:,params.by_ind], sol[:,:,:,params.bz_ind]
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
   ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
   ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
   bx , by, bz = vars.bx, vars.by, vars.bz
 
   k⁻² = grid.invKrsq
-  k1, k2, k3 = grid.kr, grid.l, grid.m
+  kx, ky, kz = grid.kr, grid.l, grid.m
 
   # define the sketch variables
   # - imag space sketch variables
-  @views Axh, Ayh, Azh = sk_arr1[:,:,1], sk_arr1[:,:,2], sk_arr1[:,:,3]
-  @views Jxh, Jyh, Jzh = sk_arr1[:,:,4], sk_arr1[:,:,5], sk_arr1[:,:,6]
-  @views sk1, sk2, sk3 = sk_arr1[:,:,4], sk_arr1[:,:,5], sk_arr1[:,:,6] # intend to do it 
-  @views Hh, ΔHh       = sk_arr2[:,:,1], sk_arr2[:,:,2]
-  @views λh_next, λₙh  = sk_arr2[:,:,3], sk_arr2[:,:,4]
-  @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr2[:,:,5], sk_arr2[:,:,6]
-  @views ∇∇²∇λBh     = sk_arr1[:,:,1] # intend to do it
-  @views C₁λₙh = sk_arr1[:,:,2] # intend to do it
+  @views Axh, Ayh, Azh = sk_arr1[:,:,:,1], sk_arr1[:,:,:,2], sk_arr1[:,:,:,3]
+  @views Jxh, Jyh, Jzh = sk_arr1[:,:,:,4], sk_arr1[:,:,:,5], sk_arr1[:,:,:,6]
+  @views sk1, sk2, sk3 = sk_arr1[:,:,:,4], sk_arr1[:,:,:,5], sk_arr1[:,:,:,6] # intend to do it 
+  @views sk4, sk5, sk6 = sk_arr1[:,:,:,1], sk_arr1[:,:,:,2], sk_arr1[:,:,:,3] # intend to do it   
+  @views Hh, ΔHh       = sk_arr2[:,:,:,1], sk_arr2[:,:,:,2]
+  @views λh_next, λₙh  = sk_arr2[:,:,:,3], sk_arr2[:,:,:,4]
+  @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr2[:,:,:,5]
+  @views B∇∇²∇λBh     = sk_arr1[:,:,:,1] # intend to do it
+  @views Δλh          = sk_arr1[:,:,:,1] # intend to do it
+  @views C₁λₙh = sk_arr1[:,:,:,2] # intend to do it
   H₀h = params.usr_params.H₀h
 
   # - real space sketch variables
   @views Jx, Jy, Jz = params.usr_params.sk[:,:,:,1], params.usr_params.sk[:,:,:,2], params.usr_params.sk[:,:,:,3]
   @views Ax, Ay, Az = params.usr_params.sk[:,:,:,4], params.usr_params.sk[:,:,:,5], params.usr_params.sk[:,:,:,6]
+  Δλ = vars.nonlin1
   λₙ = params.usr_params.λₙ
 
   # ---------------------------- step 1. ------------------------------------#
-  # some preparation work for computing ΔH, C0, C1 D, λ₀, real of i space?
+  # some preparation work for computing ΔH, C0, C1 D, λ₀
 
   # Compute Vector Potential & current by assuming the Coulomb gauge ∇ ⋅ A = 0
   @. Jxh = im*(ky*bzh - kz*byh)
@@ -74,19 +81,18 @@ function HmCorrection!(prob; ε = 1f-4)
   ldiv!(Ay, grid.rfftplan, deepcopy(Ayh))
   ldiv!(Az, grid.rfftplan, deepcopy(Azh))
   
-  # Real or imag space? Should be real space? but Cᵢ is imag space?
-  C₀ = 2 *square_mean(bx,by,bz)
-  C₁  = @. bx^2 + by^2 + bz^2 + (Jx,Jy,Jz)⋅(Ax,Ay,Az) - C₀ 
+  # C₁ = B^2 + J ⋅ A C₀
+  C₀ = 2 *square_mean(bx,by,bz)  #eq. 20
+  C₁  = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az - C₀ # eq. 21
 
   # Compute the magnetic helicity 
-  H  = (Ax,Ay,Az) ⋅ (bx,by,bz)
+  H  = @. Ax*bx + Ay*by + Az*bz
   mul!(Hh, grid.rfftplan, H)
   @. ΔHh = Hh - H₀h # imag space
-
-  @. λₙ  = ΔH/2/(C₀ .+ C₁)
+  ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
+  @. λₙ  = λₙ/2/(C₀ .+ C₁) # eq. 27
   mul!(λₙh, grid.rfftplan, λₙ)
   
-  #ComputeD₀D₁!(D₀, D₁, Axh, Ayh, Azh, grid, vars)
 
   # ---------------------------- step 2. ------------------------------------#
   # compute the err and iterate the λ until it is converge 
@@ -96,26 +102,27 @@ function HmCorrection!(prob; ε = 1f-4)
   while err > ε
 
     # compute the C₁λₙ term
-    ldiv!(λₙ, grid.rfftplan, deepcopy(λhₙ))
+    ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh))
     C₁λₙ = @. C₁*λₙ 
     mul!(C₁λₙh, grid.rfftplan, C₁λₙ)
 
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
     Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λₙ, 
-                           bxh, byh, bzh, bx ,by ,bz,
-                           params, vars, grid)
-
+                            bx ,by ,bz,
+                            params, vars, grid, ∇⁻²∇λBh = sk1)
 
     # Implicit summation for computing λₙ₊₁ from eq. 25 in the paper
     for (Aᵢ,kᵢ,i) ∈ zip((Ax,Ay,Az),(kx,ky,kz), (1,2,3))
       for (Aⱼ,kⱼ,j) ∈ zip((Ax,Ay,Az),(kx,ky,kz), (1,2,3))
-        
-        D₁ᵢⱼ = @. δ(i,j)*(Ax,Ay,Az)⋅(Ax,Ay,Az) - Aᵢ*Aⱼ
-        D₀ᵢⱼ = mean(D₁ᵢⱼ)
-        D₁ᵢⱼ = @. D₁ᵢⱼ - D₀ᵢⱼ 
-        Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λhₙ, D₁ᵢⱼ, 
-                                 params, vars, grid) 
-        @. λh_next += (@. ΔHh -2*C₁λₙh + ∂ᵢD₁ᵢⱼ∂ⱼλₙh + B∇∇²∇λBh)/(@. 2*C₀ + kᵢ*kⱼ*D₀ᵢⱼ); 
+         
+            # @show size((Ax,Ay,Az)⋅(Ax,Ay,Az)), size(Aᵢ*Aⱼ), size(Aᵢ),size(Aⱼ) 
+        D₁ᵢⱼ = @. δ(i,j)*(Ax.*Ax + Ay.*Ay + Az.*Az) - Aᵢ*Aⱼ 
+        D₀ᵢⱼ = mean(D₁ᵢⱼ)      # eq. 22
+        D₁ᵢⱼ = @. D₁ᵢⱼ - D₀ᵢⱼ  # eq. 23
+        Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λₙh, D₁ᵢⱼ, 
+                                 kᵢ, kⱼ, params, vars, grid)
+        #Acutal computation of eq 25 
+        @. λh_next += (ΔHh .- 2*C₁λₙh .+ ∂ᵢD₁ᵢⱼ∂ⱼλₙh .+ B∇∇²∇λBh)/(2*C₀ .+ kᵢ.*kⱼ.*D₀ᵢⱼ); 
       
       end
     end
@@ -126,22 +133,24 @@ function HmCorrection!(prob; ε = 1f-4)
     err = L1_err_max(Δλ)
 
     # data movement for next iteration
-    copyto!(λhₙ, λh_next)
+    copyto!(λₙh, λh_next)
 
     @. λh_next  = 0
 
   end
-
+  
   # ---------------------------- step 3. ------------------------------------#
   # work out the A' = A + δA and then compute the B' = ∇ × A'
-   ComputeδB!(λhₙ, Axh, Ayh, Azh, 
-              bx, by, bz, bxh, byh, bzh,
-              vars, params, grid)
+  ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
+  ComputeδB!(λₙ, Ax, Ay, Az, 
+             bx, by, bz, bxh, byh, bzh,
+             vars, params, grid; 
+             λBxh = sk1, λByh = sk2, λBzh = sk3,
+             λAxh = sk4, λAyh = sk5, λAzh = sk6)
 
   return nothing 
 
 end
-
 
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
 function Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λ, 
@@ -152,14 +161,15 @@ function Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λ,
   ∂ᵢ∇⁻²∇λBh = Bᵢ∂ᵢ∇⁻²∇λBh = λbᵢh = vars.nonlinh1
 
   @. ∇⁻²∇λBh  *= 0 
-  @. ∇∇²∇λBh  *= 0
+  @. B∇∇²∇λBh *= 0
 
+  kx, ky, kz = grid.kr, grid.l, grid.m
   k⁻² = grid.invKrsq;
 
   for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))
     @. λbᵢ = λ*bᵢ
     mul!(λbᵢh, grid.rfftplan, λbᵢ)
-    ∇⁻²∇λBh += im*kᵢ*λbᵢh*k⁻²
+    @. ∇⁻²∇λBh += im*kᵢ*λbᵢh*k⁻²
   end
 
   for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))
@@ -168,7 +178,7 @@ function Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λ,
 
     ldiv!(∂ᵢ∇⁻²∇λB, grid.rfftplan,∇⁻²∇λBh)
 
-    ∂ᵢ∇⁻²∇λB = bᵢ*∂ᵢ∇⁻²∇λB
+    @. ∂ᵢ∇⁻²∇λB = bᵢ*∂ᵢ∇⁻²∇λB
 
     mul!(Bᵢ∂ᵢ∇⁻²∇λBh, grid.rfftplan, ∂ᵢ∇⁻²∇λB)
 
@@ -183,8 +193,8 @@ end
 # define the vars..
 function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λh, D₁ᵢⱼ, kᵢ, kⱼ, params, vars, grid)
   # 2 real and 2 imag sketch array
-  ∂ⱼλₙh = ∂ᵢD₁ᵢⱼ∂ⱼλₙh = vars.nonlinh1  
-  ∂ⱼλₙ  = vars.nonlin1
+  ∂ⱼλₙh = vars.nonlinh1  
+  ∂ⱼλₙ  = D₁ᵢⱼ∂ⱼλₙ = vars.nonlin1
 
   @. ∂ⱼλₙh = im*kⱼ*λh
 
@@ -200,26 +210,29 @@ function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh,
 end
 
 # Compute the δA and add it back to B
-function ComputeδB!(λh, Axh, Ayh, Azh, 
+function ComputeδB!(λ, Ax, Ay, Az,  
                     bx, by, bz, bxh, byh, bzh,
                     vars, params, grid; 
-                    λBxh = sk1, λByh = sk2, λBzh = sk3)
+                    λBxh = sk1, λByh = sk2, λBzh = sk3,
+                    λAxh = sk4, λAyh = sk5, λAzh = sk6)
+  
+  # define the sketch variables
+  λbᵢ = vars.nonlin1
+  δAxh, δAyh, δAzh = λBxh ,λByh ,λBzh
 
-  λbᵢ = vars.nonhin1
+  kx,ky,kz = grid.kr, grid.l, grid.m
+  for (bᵢ, λbᵢh, Aᵢ, λAᵢh) ∈ zip((bx, by, bz), (λBxh ,λByh ,λBzh), (Ax, Ay, Az), (λAxh ,λAyh ,λAzh))
+    @. λbᵢ = λ*bᵢ
+    mul!(λbᵢh, grid.rfftplan, λbᵢ)
+    @. λbᵢ = λ*Aᵢ
+    mul!(λAᵢh, grid.rfftplan, λbᵢ)       
+  end
 
-  @. λbᵢ = λ*bx
-  mul!(λBxh, grid.rfftplan, λbᵢ)
-  @. λbᵢ = λ*by
-  mul!(λByh, grid.rfftplan, λbᵢ)
-  @. λbᵢ = λ*bz
-  mul!(λBzh, grid.rfftplan, λbᵢ)    
-
-  ∇⁻²∇λBh = -im*(kx*λ*Bxh + ky*λ*Byh + kz*λ*Bzh)*k⁻²
-
-  # δA = ∇×(λA) + λB - ∇∇⁻²∇⋅λB
-  @. δAxh = im*(@. ky*Azh - kz*Ayh) + λBxh - im*kx*∇⁻²∇λBh
-  @. δAyh = im*(@. kz*Axh - kx*Azh) + λByh - im*ky*∇⁻²∇λBh
-  @. δAzh = im*(@. kx*Ayh - ky*Axh) + λBzh - im*kz*∇⁻²∇λBh
+  # eq. 28 : δA = ∇×(λA) + λB - ∇∇⁻²∇⋅λB 
+  # since ∇×(∇ϕ) = 0, we neglect the ∇∇⁻²∇⋅λB part 
+  @. δAxh = im*(@. ky*λAzh - kz*λAyh) + λBxh
+  @. δAyh = im*(@. kz*λAxh - kx*λAzh) + λByh
+  @. δAzh = im*(@. kx*λAyh - ky*λAxh) + λBzh
 
   # B = B + ∇×(δA)
   @. bxh += im*(ky*δAzh - kz*δAyh)

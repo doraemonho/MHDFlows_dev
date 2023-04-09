@@ -246,6 +246,7 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     a   = 1
     kₐ  = grid.kr
     Aᵢ  = vars.∇XBᵢ
+    Aᵢh = vars.∇XBᵢh
     bᵢ  = vars.bx 
     bᵢh = @view sol[:,:,:,params.bx_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.bx_ind]
@@ -254,6 +255,7 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     a   = 2
     kₐ  = grid.l
     Aᵢ  = vars.∇XBⱼ
+    Aᵢh = vars.∇XBⱼh
     bᵢ  = vars.by 
     bᵢh = @view sol[:,:,:,params.by_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.by_ind]
@@ -262,6 +264,7 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     a   = 3
     kₐ  = grid.m
     Aᵢ  = vars.∇XBₖ
+    Aᵢh = vars.∇XBₖh
     bᵢ  = vars.bz 
     bᵢh = @view sol[:,:,:,params.bz_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.bz_ind]
@@ -276,18 +279,16 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   A₃  = vars.∇XBₖ
 
   # define the sketch array
+  Bᵢh   = vars.nonlinh1
   ∂ⱼAᵢ  = ∂ⱼBᵢ  = vars.nonlin1
   Bⱼ∂ⱼAᵢ= Aⱼ∂ⱼBᵢ= vars.nonlin1
-  Aᵢh   = Bᵢh   = vars.nonlinh1
   ∂ⱼAᵢh = ∂ⱼBᵢh = vars.nonlinh1
   Bⱼ∂ⱼAᵢh = Aⱼ∂ⱼBᵢh = vars.nonlinh1
 
-  @. ∂Bᵢh∂t*= 0;
+  @. ∂Bᵢh∂t*= 0
   for (bⱼ,Aⱼ,kⱼ) ∈ zip((vars.bx,vars.by,vars.bz),(A₁,A₂,A₃),(grid.kr,grid.l,grid.m))
     
     # first step
-    @. Aᵢh = 0
-    mul!(Aᵢh, grid.rfftplan, Aᵢ)
     @. ∂ⱼAᵢh = im*kⱼ*Aᵢh
     ldiv!(∂ⱼAᵢ, grid.rfftplan, deepcopy(∂ⱼAᵢh))
     # second step
@@ -329,15 +330,14 @@ function Get∇XB!(sol, vars, params, grid)
   A₃  = vars.∇XBₖ
 
   # Way 2 of appling Curl
-  CBᵢh = vars.nonlinh1
-  @. CBᵢh = im*(k₂*B₃h - k₃*B₂h)
-  ldiv!(A₁, grid.rfftplan, CBᵢh)  
+  @. vars.∇XBᵢh = im*(k₂*B₃h - k₃*B₂h)
+  ldiv!(A₁, grid.rfftplan, deepcopy(vars.∇XBᵢh))  
 
-  @. CBᵢh = im*(k₃*B₁h - k₁*B₃h)
-  ldiv!(A₂, grid.rfftplan, CBᵢh)  
+  @. vars.∇XBⱼh = im*(k₃*B₁h - k₁*B₃h)
+  ldiv!(A₂, grid.rfftplan, deepcopy(vars.∇XBⱼh))  
 
-  @. CBᵢh = im*(k₁*B₂h - k₂*B₁h)
-  ldiv!(A₃, grid.rfftplan, CBᵢh)  
+  @. vars.∇XBₖh = im*(k₁*B₂h - k₂*B₁h)
+  ldiv!(A₃, grid.rfftplan, deepcopy(vars.∇XBₖh))  
 
   return nothing
 end

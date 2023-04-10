@@ -33,6 +33,7 @@ function HmCorrection!(prob; ε = 1f-4)
   vars = prob.vars
   params = prob.params
   sk_arr1,sk_arr2 = ts.RHS₁,ts.RHS₂
+  sk_arr3,sk_arr4 = ts.RHS₃,ts.RHS₄
     
   @views bxh,byh,bzh = sol[:,:,:,params.bx_ind], sol[:,:,:,params.by_ind], sol[:,:,:,params.bz_ind]
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
@@ -47,14 +48,14 @@ function HmCorrection!(prob; ε = 1f-4)
   # - imag space sketch variables
   @views Axh, Ayh, Azh = sk_arr1[:,:,:,1], sk_arr1[:,:,:,2], sk_arr1[:,:,:,3]
   @views Jxh, Jyh, Jzh = sk_arr1[:,:,:,4], sk_arr1[:,:,:,5], sk_arr1[:,:,:,6]
-  @views sk1, sk2, sk3 = sk_arr1[:,:,:,4], sk_arr1[:,:,:,5], sk_arr1[:,:,:,6] # intend to do it 
-  @views sk4, sk5, sk6 = sk_arr1[:,:,:,1], sk_arr1[:,:,:,2], sk_arr1[:,:,:,3] # intend to do it   
-  @views Hh, ΔHh       = sk_arr2[:,:,:,1], sk_arr2[:,:,:,2]
-  @views λh_next, λₙh  = sk_arr2[:,:,:,3], sk_arr2[:,:,:,4]
-  @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr2[:,:,:,5]
-  @views B∇∇²∇λBh     = sk_arr1[:,:,:,1] # intend to do it
-  @views Δλh          = sk_arr1[:,:,:,1] # intend to do it
-  @views C₁λₙh = sk_arr1[:,:,:,2] # intend to do it
+  @views sk1, sk2, sk3 = sk_arr2[:,:,:,4], sk_arr2[:,:,:,5], sk_arr2[:,:,:,6] # intend to do it 
+  @views sk4, sk5, sk6 = sk_arr2[:,:,:,1], sk_arr2[:,:,:,2], sk_arr2[:,:,:,3] # intend to do it   
+  @views Hh, ΔHh       = sk_arr3[:,:,:,1], sk_arr3[:,:,:,2]
+  @views λh_next, λₙh  = sk_arr3[:,:,:,3], sk_arr3[:,:,:,4]
+  @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr3[:,:,:,5]
+  @views B∇∇²∇λBh     = sk_arr4[:,:,:,1] # intend to do it
+  @views Δλh          = sk_arr4[:,:,:,2] # intend to do it
+  @views C₁λₙh = sk_arr4[:,:,:,3] # intend to do it
   H₀h = params.usr_params.H₀h
 
   # - real space sketch variables
@@ -91,8 +92,8 @@ function HmCorrection!(prob; ε = 1f-4)
   @. ΔHh = Hh - H₀h # imag space
   ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
   @. λₙ  = λₙ/2/(C₀ .+ C₁) # eq. 27
+  λₙ[abs.(C₀.- C₁) .< 1e-2 ] .= 0;
   mul!(λₙh, grid.rfftplan, λₙ)
-  
 
   # ---------------------------- step 2. ------------------------------------#
   # compute the err and iterate the λ until it is converge 
@@ -115,7 +116,6 @@ function HmCorrection!(prob; ε = 1f-4)
     for (Aᵢ,kᵢ,i) ∈ zip((Ax,Ay,Az),(kx,ky,kz), (1,2,3))
       for (Aⱼ,kⱼ,j) ∈ zip((Ax,Ay,Az),(kx,ky,kz), (1,2,3))
          
-            # @show size((Ax,Ay,Az)⋅(Ax,Ay,Az)), size(Aᵢ*Aⱼ), size(Aᵢ),size(Aⱼ) 
         D₁ᵢⱼ = @. δ(i,j)*(Ax.*Ax + Ay.*Ay + Az.*Az) - Aᵢ*Aⱼ 
         D₀ᵢⱼ = mean(D₁ᵢⱼ)      # eq. 22
         D₁ᵢⱼ = @. D₁ᵢⱼ - D₀ᵢⱼ  # eq. 23
@@ -126,19 +126,17 @@ function HmCorrection!(prob; ε = 1f-4)
       
       end
     end
-
     # compute the rms error, may have to switch to real space
+    λh_next[isinf.(λh_next)] .= 0    
     @. Δλh = λh_next - λₙh
     ldiv!(Δλ, grid.rfftplan, Δλh)
     err = L1_err_max(Δλ)
-
     # data movement for next iteration
     copyto!(λₙh, λh_next)
-
     @. λh_next  = 0
 
   end
-  
+  dealias!(grid,λₙh)
   # ---------------------------- step 3. ------------------------------------#
   # work out the A' = A + δA and then compute the B' = ∇ × A'
   ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
@@ -148,7 +146,7 @@ function HmCorrection!(prob; ε = 1f-4)
              λBxh = sk1, λByh = sk2, λBzh = sk3,
              λAxh = sk4, λAyh = sk5, λAzh = sk6)
 
-  return nothing 
+  return C₀, C₁ 
 
 end
 

@@ -3,7 +3,6 @@
 # ----------
 # Note : Have to check if any sketch variables is overlaped
 
-
 mutable struct Hm_vars{Atrans,Aphys,Aphys4D}
   λₙ  :: Aphys
   H₀h :: Atrans
@@ -27,7 +26,7 @@ end
 # ΔH - 2C₁λ + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) - 2C₀λ + ∂ᵢD₀ᵢⱼ∂ⱼλ = 0
 # Where in k-space, we define a function g,
 # g = λ + 2C₁λ + 2C₀λ - D₀ᵢⱼkᵢkⱼλ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB))) (k) 
-# If the equation converage, g(λₙ) = λ 
+# If the equation converage, g(λₙ₊₁) = λₙ 
 # In this case, we adopt the fix point method.
 function HmCorrection!(prob; ε = 1f-10)
   square_mean(A,B,C) = mapreduce((x,y,z)->x*x+y*y+z*z,+,A,B,C)/length(A)
@@ -99,7 +98,7 @@ function HmCorrection!(prob; ε = 1f-10)
   mul!(Hh, grid.rfftplan, H)
   @. ΔHh = Hh - H₀h # imag space
   ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
-  @. λₙ  = λₙ/2/(C₀); # eq. 27
+  @. λₙ  = λₙ/2/C₀  # eq. 27
   mul!(λₙh, grid.rfftplan, λₙ)
 
 
@@ -118,8 +117,8 @@ function HmCorrection!(prob; ε = 1f-10)
 
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
     Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λₙ, 
-                           bx ,by ,bz,
-                           params, vars, grid, ∇⁻²∇λBh = sk1)
+                            bx ,by ,bz,
+                            params, vars, grid, ∇⁻²∇λBh = sk1)
     @.   kᵢkⱼD₀ᵢⱼ = 0   
     @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh = 0
     # Implicit summation for computing λₙ₊₁ from eq. 25 in the paper
@@ -133,7 +132,8 @@ function HmCorrection!(prob; ε = 1f-10)
                                  kᵢ, kⱼ, params, vars, grid)
       end
     end
-    # g = λ + 2C₁λ + 2C₀λ - D₀ᵢⱼkᵢkⱼλ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB))) (k) 
+   
+    #  λₙ₊₁ = g = λₙ + 2C₁λₙ + 2C₀λₙ - D₀ᵢⱼkᵢkⱼλₙ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλₙ + B⋅∇(∇⁻²∇⋅(λₙB))) (k) 
     @. λh_next = λₙh + 2*C₁λₙh + 2*C₀*λₙh - kᵢkⱼD₀ᵢⱼ*λₙh - ΔHh - ∂ᵢD₁ᵢⱼ∂ⱼλₙh - B∇∇⁻²∇λBh     
    
     # compute the rms error in real space      
@@ -164,8 +164,8 @@ end
 
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
 function Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λ, 
-                                bx ,by ,bz,
-                                params, vars, grid; ∇⁻²∇λBh = sk1)
+                                  bx ,by ,bz,
+                                  params, vars, grid; ∇⁻²∇λBh = sk1)
 
   ∂ᵢ∇⁻²∇λB  = λbᵢ = vars.nonlin1
   ∂ᵢ∇⁻²∇λBh = Bᵢ∂ᵢ∇⁻²∇λBh = λbᵢh = vars.nonlinh1

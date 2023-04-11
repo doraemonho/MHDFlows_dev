@@ -1,6 +1,8 @@
 # ----------
 # Module For Magnetic helicity correction scheme, Ref : Zenati & Vishniac 2021
 # ----------
+# Note : Have to check if any sketch variables is overlaped
+
 
 mutable struct Hm_vars{Atrans,Aphys,Aphys4D}
   λₙ  :: Aphys
@@ -20,6 +22,13 @@ end
 
 # function of correction the B-field to conserve the Hm
 # note: this has a time constraint for weak field case from eq. 31
+# we have a slightly different implementation from their paper
+# we start from the equation 24. 
+# ΔH - 2C₁λ + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) - 2C₀λ + ∂ᵢD₀ᵢⱼ∂ⱼλ = 0
+# Where in k-space, we define a function g,
+# g = λ + 2C₁λ + 2C₀λ - D₀ᵢⱼkᵢkⱼλ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB))) (k) 
+# If the equation converage, g(λₙ) = λ 
+# In this case, we adopt the fix point method.
 function HmCorrection!(prob; ε = 1f-10)
   square_mean(A,B,C) = mapreduce((x,y,z)->x*x+y*y+z*z,+,A,B,C)/length(A)
   L2_err_max(dA) =  mapreduce(x->x*x, max, dA)
@@ -44,19 +53,18 @@ function HmCorrection!(prob; ε = 1f-10)
   k⁻² = grid.invKrsq
   kx, ky, kz = grid.kr, grid.l, grid.m
 
-  # define the sketch variables
+  # define the "pointer" of sketch variables
   # - imag space sketch variables
   @views Axh, Ayh, Azh = sk_arr1[:,:,:,1], sk_arr1[:,:,:,2], sk_arr1[:,:,:,3]
   @views Jxh, Jyh, Jzh = sk_arr1[:,:,:,4], sk_arr1[:,:,:,5], sk_arr1[:,:,:,6]
-  @views sk1, sk2, sk3 = sk_arr2[:,:,:,4], sk_arr2[:,:,:,5], sk_arr2[:,:,:,6] # intend to do it 
-  @views sk4, sk5, sk6 = sk_arr2[:,:,:,1], sk_arr2[:,:,:,2], sk_arr2[:,:,:,3] # intend to do it   
+  @views sk1, sk2, sk3 = sk_arr2[:,:,:,1], sk_arr2[:,:,:,2], sk_arr2[:,:,:,3] 
+  @views sk4, sk5, sk6 = sk_arr2[:,:,:,4], sk_arr2[:,:,:,5], sk_arr2[:,:,:,6]   
   @views Hh, ΔHh       = sk_arr3[:,:,:,1], sk_arr3[:,:,:,2]
   @views λh_next, λₙh  = sk_arr3[:,:,:,3], sk_arr3[:,:,:,4]
   @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr3[:,:,:,5]
-  @views kᵢkⱼD₀ᵢⱼ, I  =  sk_arr4[:,:,:,1], sk_arr4[:,:,:,2]
-  @views B∇∇²∇λBh     = sk_arr4[:,:,:,3] # intend to do it
-  @views Δλh          = sk_arr4[:,:,:,4] # intend to do it
-  @views C₁λₙh = sk_arr4[:,:,:,5] # intend to do it
+  @views kᵢkⱼD₀ᵢⱼ, I   = sk_arr4[:,:,:,1], sk_arr4[:,:,:,2]
+  @views B∇∇⁻²∇λBh   = sk_arr4[:,:,:,3] 
+  @views Δλh, C₁λₙh    = sk_arr4[:,:,:,4], sk_arr4[:,:,:,5] 
   H₀h = params.usr_params.H₀h
 
   # - real space sketch variables
@@ -109,10 +117,11 @@ function HmCorrection!(prob; ε = 1f-10)
     mul!(C₁λₙh, grid.rfftplan, C₁λₙ)
 
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
-    Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λₙ, 
+    Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λₙ, 
                            bx ,by ,bz,
                            params, vars, grid, ∇⁻²∇λBh = sk1)
-    @.  kᵢkⱼD₀ᵢⱼ = 0   
+    @.   kᵢkⱼD₀ᵢⱼ = 0   
+    @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh = 0
     # Implicit summation for computing λₙ₊₁ from eq. 25 in the paper
     for (Aᵢ,kᵢ,i) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3))
       for (Aⱼ,kⱼ,j) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3)) 
@@ -124,9 +133,10 @@ function HmCorrection!(prob; ε = 1f-10)
                                  kᵢ, kⱼ, params, vars, grid)
       end
     end
-    #Acutal computation of eq 25 
-    @. λh_next = (ΔHh .- 2*C₁λₙh .+ ∂ᵢD₁ᵢⱼ∂ⱼλₙh .+ B∇∇²∇λBh)/(2*C₀ .+ kᵢkⱼD₀ᵢⱼ);     
-    # compute the rms error, may have to switch to real space      
+    # g = λ + 2C₁λ + 2C₀λ - D₀ᵢⱼkᵢkⱼλ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB))) (k) 
+    @. λh_next = λₙh + 2*C₁λₙh + 2*C₀*λₙh - kᵢkⱼD₀ᵢⱼ*λₙh - ΔHh - ∂ᵢD₁ᵢⱼ∂ⱼλₙh - B∇∇⁻²∇λBh     
+   
+    # compute the rms error in real space      
     @. Δλh = λh_next - λₙh
     ldiv!(Δλ, grid.rfftplan, Δλh)
     err = maximum(Δλ.^2)
@@ -139,28 +149,29 @@ function HmCorrection!(prob; ε = 1f-10)
   end
   #dealias!(grid,λₙh)
   # ---------------------------- step 3. ------------------------------------#
-  # work out the A' = A + δA and then compute the B' = ∇ × A'
+  # work out the δA and then compute the B' = B₀ + ∇ × δA
   ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
   ComputeδB!(λₙ, Ax, Ay, Az, 
              bx, by, bz, bxh, byh, bzh,
              vars, params, grid; 
              λBxh = sk1, λByh = sk2, λBzh = sk3,
-             λAxh = sk4, λAyh = sk5, λAzh = sk6)
+             λAxh = sk4, λAyh = sk5, λAzh = sk6,
+             δAxh = Axh, δAyh = Ayh, δAzh = Azh)
 
     return nothing
 
 end
 
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
-function Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λ, 
+function Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λ, 
                                 bx ,by ,bz,
                                 params, vars, grid; ∇⁻²∇λBh = sk1)
 
   ∂ᵢ∇⁻²∇λB  = λbᵢ = vars.nonlin1
   ∂ᵢ∇⁻²∇λBh = Bᵢ∂ᵢ∇⁻²∇λBh = λbᵢh = vars.nonlinh1
 
-  @. ∇⁻²∇λBh  *= 0 
-  @. B∇∇²∇λBh *= 0
+  @. ∇⁻²∇λBh  = 0 
+  @. B∇∇⁻²∇λBh = 0
 
   kx, ky, kz = grid.kr, grid.l, grid.m
   k⁻² = grid.invKrsq;
@@ -181,7 +192,7 @@ function Get_the_B∇∇²∇λB_term!(B∇∇²∇λBh, λ,
 
     mul!(Bᵢ∂ᵢ∇⁻²∇λBh, grid.rfftplan, ∂ᵢ∇⁻²∇λB)
 
-    B∇∇²∇λBh += Bᵢ∂ᵢ∇⁻²∇λBh
+    B∇∇⁻²∇λBh += Bᵢ∂ᵢ∇⁻²∇λBh
 
   end
 
@@ -192,7 +203,7 @@ end
 # define the vars..
 function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λh, D₁ᵢⱼ, kᵢ, kⱼ, params, vars, grid)
   # 2 real and 2 imag sketch array
-  ∂ⱼλₙh = ∂ᵢD₁ᵢⱼ∂ⱼλₙh = vars.nonlinh1  
+  ∂ⱼλₙh = D₁ᵢⱼ∂ⱼλₙh = vars.nonlinh1  
   ∂ⱼλₙ  = D₁ᵢⱼ∂ⱼλₙ = vars.nonlin1
 
   @. ∂ⱼλₙh = im*kⱼ*λh
@@ -201,11 +212,12 @@ function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh,
 
   D₁ᵢⱼ∂ⱼλₙ = @. D₁ᵢⱼ*∂ⱼλₙ
 
-  mul!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, grid.rfftplan, D₁ᵢⱼ∂ⱼλₙ)
+  mul!(D₁ᵢⱼ∂ⱼλₙh, grid.rfftplan, D₁ᵢⱼ∂ⱼλₙ)
 
-  @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh += im*kᵢ*∂ᵢD₁ᵢⱼ∂ⱼλₙh
+  @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh += im*kᵢ*D₁ᵢⱼ∂ⱼλₙh
 
   return nothing 
+
 end
 
 # Compute the δA and add it back to B
@@ -213,7 +225,8 @@ function ComputeδB!(λ, Ax, Ay, Az,
                     bx, by, bz, bxh, byh, bzh,
                     vars, params, grid; 
                     λBxh = sk1, λByh = sk2, λBzh = sk3,
-                    λAxh = sk4, λAyh = sk5, λAzh = sk6)
+                    λAxh = sk4, λAyh = sk5, λAzh = sk6,
+                    δAxh = sk7, δAyh = sk8, δAzh = sk9)
   
   # define the sketch variables
   λbᵢ = vars.nonlin1
@@ -228,7 +241,7 @@ function ComputeδB!(λ, Ax, Ay, Az,
   end
 
   # eq. 28 : δA = ∇×(λA) + λB - ∇∇⁻²∇⋅λB 
-  # since ∇×(∇ϕ) = 0, we neglect the ∇∇⁻²∇⋅λB part 
+  # since ∇×(∇ϕ) = 0 in the computation of B part, we neglect the ∇∇⁻²∇⋅λB part 
   @. δAxh = im*(ky.*λAzh .- kz.*λAyh) + λBxh
   @. δAyh = im*(kz.*λAxh .- kx.*λAzh) + λByh
   @. δAzh = im*(kx.*λAyh .- ky.*λAxh) + λBzh

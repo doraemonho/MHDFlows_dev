@@ -83,38 +83,38 @@ function HmCorrection!(prob; ε = 1f-10)
   ldiv!(Jy, grid.rfftplan, deepcopy(Jyh))
   ldiv!(Jz, grid.rfftplan, deepcopy(Jzh))
 
-  @. Axh = -Jxh*k⁻²
-  @. Ayh = -Jyh*k⁻²
-  @. Azh = -Jzh*k⁻²
+  @. Axh = Jxh*k⁻²
+  @. Ayh = Jyh*k⁻²
+  @. Azh = Jzh*k⁻²
   ldiv!(Ax, grid.rfftplan, deepcopy(Axh))  
   ldiv!(Ay, grid.rfftplan, deepcopy(Ayh))
   ldiv!(Az, grid.rfftplan, deepcopy(Azh))
   
   # C₁ = B^2 + J ⋅ A C₀
   C₀ = 2 *square_mean(bx,by,bz)  #eq. 20
-  C₁  = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az - C₀ # eq. 21
+  C₁  = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az  # eq. 21
   # Compute the magnetic helicity 
   H  = @. Ax*bx + Ay*by + Az*bz
   mul!(Hh, grid.rfftplan, H)
   @. ΔHh = Hh - H₀h # imag space
+  dealias!(ΔHh, grid)  
   ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
-  @. λₙ  = λₙ/2/C₀  # eq. 27
+  @. λₙ  = -λₙ/2  # eq. 27
   mul!(λₙh, grid.rfftplan, λₙ)
-
 
   # ---------------------------- step 2. ------------------------------------#
   # compute the err and iterate the λ until it is converge 
   err = 1.0
-#=
+
   @. λh_next = 0
   @.       I = 1
   A² = @. Ax*Ax + Ay*Ay + Az*Az
-  for i = 1:1
-
+  for i = 1:3
+        
     # compute the C₁λₙ term
     ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh))
     C₁λₙ = @. C₁*λₙ 
-    mul!(C₁λₙh, grid.rfftplan, C₁λₙ);
+    mul!(C₁λₙh, grid.rfftplan, C₁λₙ);   dealias!(C₁λₙh, grid);  
 
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
     Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λₙ, 
@@ -125,19 +125,20 @@ function HmCorrection!(prob; ε = 1f-10)
     # Implicit summation for computing λₙ₊₁ from eq. 25 in the paper
     for (Aᵢ,kᵢ,i) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3))
       for (Aⱼ,kⱼ,j) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3))
+                
         δᵢⱼ  = δ(i,j)
-        D₁ᵢⱼ = @. δᵢⱼ*A² - Aᵢ*Aⱼ      
-        D₀ᵢⱼ = mean(D₁ᵢⱼ)
-        @. kᵢkⱼD₀ᵢⱼ += -kᵢ*kⱼ*I*D₀ᵢⱼ     # eq. 22, "-" is coming im*im
-        D₁ᵢⱼ = @. D₁ᵢⱼ - D₀ᵢⱼ           # eq. 23
+        D₁ᵢⱼ = @.  Aᵢ*Aⱼ - δᵢⱼ*A²      
         Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λₙh, D₁ᵢⱼ, 
                                  kᵢ, kⱼ, params, vars, grid)
       end
     end
-    # ΔH - 2C₁λ + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) - 2C₀λ + ∂ᵢD₀ᵢⱼ∂ⱼλ = 0
-    #  λₙ₊₁ = g = λₙ + 2C₁λₙ + 2C₀λₙ - D₀ᵢⱼkᵢkⱼλₙ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλₙ + B⋅∇(∇⁻²∇⋅(λₙB))) (k) 
-    @. λh_next = λₙh + ΔHh + ∂ᵢD₁ᵢⱼ∂ⱼλₙh + B∇∇⁻²∇λBh - 2*C₁λₙh - 2*C₀*λₙh + kᵢkⱼD₀ᵢⱼ*λₙh  
-   
+    # ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
+       
+    #  λₙ₊₁ = g = λₙ +  ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
+    # I can just take 19...   
+    @. λh_next = λₙh - ΔHh - B∇∇⁻²∇λBh + 2*C₁λₙh + ∂ᵢD₁ᵢⱼ∂ⱼλₙh
+    #@. λh_next = (ΔHh .- 2*C₁λₙh .+ ∂ᵢD₁ᵢⱼ∂ⱼλₙh .+ B∇∇⁻²∇λBh)/(2*C₀ .- kᵢkⱼD₀ᵢⱼ)
+        
     # compute the rms error in real space      
     @. Δλh = λh_next - λₙh
     ldiv!(Δλ, grid.rfftplan, Δλh)
@@ -147,10 +148,10 @@ function HmCorrection!(prob; ε = 1f-10)
     # data movement for next iteration
     copyto!(λₙh, λh_next)
     @. λh_next  = 0
-
+    dealias!(λₙh, grid)
   end
-  =#  
-  dealias!(λₙh,grid)
+
+
   # ---------------------------- step 3. ------------------------------------#
   # work out the δA and then compute the B' = B₀ + ∇ × δA
   ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
@@ -161,7 +162,7 @@ function HmCorrection!(prob; ε = 1f-10)
   #           λAxh = sk4, λAyh = sk5, λAzh = sk6,
   #           δAxh = Axh, δAyh = Ayh, δAzh = Azh)
 
-    return @. C₁
+  return ∂ᵢD₁ᵢⱼ∂ⱼλₙh
 end
 
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))

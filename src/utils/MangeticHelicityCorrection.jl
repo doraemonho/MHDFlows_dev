@@ -2,7 +2,7 @@
 # Module For Magnetic helicity correction scheme, Ref : Zenati & Vishniac 2021
 # ----------
 # Note : Have to check if any sketch variables is overlaped
-
+# Are A computed correctly?
 mutable struct Hm_vars{Atrans,Aphys,Aphys4D}
   λₙ  :: Aphys
   H₀h :: Atrans
@@ -62,7 +62,7 @@ function HmCorrection!(prob; ε = 1f-10)
   @views λh_next, λₙh  = sk_arr3[:,:,:,3], sk_arr3[:,:,:,4]
   @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr3[:,:,:,5]
   @views kᵢkⱼD₀ᵢⱼ, I   = sk_arr4[:,:,:,1], sk_arr4[:,:,:,2]
-  @views B∇∇⁻²∇λBh   = sk_arr4[:,:,:,3] 
+  @views B∇∇⁻²∇λBh    = sk_arr4[:,:,:,3] 
   @views Δλh, C₁λₙh    = sk_arr4[:,:,:,4], sk_arr4[:,:,:,5] 
   H₀h = params.usr_params.H₀h
 
@@ -92,28 +92,29 @@ function HmCorrection!(prob; ε = 1f-10)
   
   # C₁ = B^2 + J ⋅ A C₀
   C₀ = 2 *square_mean(bx,by,bz)  #eq. 20
-  C₁  = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az - C₀ # eq. 21
+  C₁  = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az  # eq. 21
   # Compute the magnetic helicity 
   H  = @. Ax*bx + Ay*by + Az*bz
   mul!(Hh, grid.rfftplan, H)
   @. ΔHh = Hh - H₀h # imag space
+  dealias!(ΔHh, grid)  
   ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
-  @. λₙ  = λₙ/2/C₀  # eq. 27
+  @. λₙ  = -λₙ/2  # eq. 27
   mul!(λₙh, grid.rfftplan, λₙ)
-
 
   # ---------------------------- step 2. ------------------------------------#
   # compute the err and iterate the λ until it is converge 
   err = 1.0
 
   @. λh_next = 0
-  @.       I = 1 
-  while err > ε
-
+  @.       I = 1
+  A² = @. Ax*Ax + Ay*Ay + Az*Az
+  for i = 1:3
+        
     # compute the C₁λₙ term
     ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh))
     C₁λₙ = @. C₁*λₙ 
-    mul!(C₁λₙh, grid.rfftplan, C₁λₙ)
+    mul!(C₁λₙh, grid.rfftplan, C₁λₙ);   dealias!(C₁λₙh, grid);  
 
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
     Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λₙ, 
@@ -123,19 +124,21 @@ function HmCorrection!(prob; ε = 1f-10)
     @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh = 0
     # Implicit summation for computing λₙ₊₁ from eq. 25 in the paper
     for (Aᵢ,kᵢ,i) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3))
-      for (Aⱼ,kⱼ,j) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3)) 
-        D₁ᵢⱼ = @. δ(i,j)*(Ax.*Ax + Ay.*Ay + Az.*Az) - Aᵢ*Aⱼ      
-        D₀ᵢⱼ = mean(D₁ᵢⱼ)
-        @. kᵢkⱼD₀ᵢⱼ += kᵢ*kⱼ*I*D₀ᵢⱼ     # eq. 22
-        D₁ᵢⱼ = @. D₁ᵢⱼ - D₀ᵢⱼ           # eq. 23
+      for (Aⱼ,kⱼ,j) ∈ zip((Ax,Ay,Az), (kx,ky,kz), (1,2,3))
+                
+        δᵢⱼ  = δ(i,j)
+        D₁ᵢⱼ = @.  Aᵢ*Aⱼ - δᵢⱼ*A²      
         Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λₙh, D₁ᵢⱼ, 
                                  kᵢ, kⱼ, params, vars, grid)
       end
     end
-   
-    #  λₙ₊₁ = g = λₙ + 2C₁λₙ + 2C₀λₙ - D₀ᵢⱼkᵢkⱼλₙ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλₙ + B⋅∇(∇⁻²∇⋅(λₙB))) (k) 
-    @. λh_next = λₙh + 2*C₁λₙh + 2*C₀*λₙh - kᵢkⱼD₀ᵢⱼ*λₙh - ΔHh - ∂ᵢD₁ᵢⱼ∂ⱼλₙh - B∇∇⁻²∇λBh     
-   
+    # ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
+       
+    #  λₙ₊₁ = g = λₙ +  ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
+    # I can just take 19...   
+    @. λh_next = λₙh - ΔHh - B∇∇⁻²∇λBh + 2*C₁λₙh + ∂ᵢD₁ᵢⱼ∂ⱼλₙh
+    #@. λh_next = (ΔHh .- 2*C₁λₙh .+ ∂ᵢD₁ᵢⱼ∂ⱼλₙh .+ B∇∇⁻²∇λBh)/(2*C₀ .- kᵢkⱼD₀ᵢⱼ)
+        
     # compute the rms error in real space      
     @. Δλh = λh_next - λₙh
     ldiv!(Δλ, grid.rfftplan, Δλh)
@@ -145,21 +148,21 @@ function HmCorrection!(prob; ε = 1f-10)
     # data movement for next iteration
     copyto!(λₙh, λh_next)
     @. λh_next  = 0
-
+    dealias!(λₙh, grid)
   end
-  #dealias!(grid,λₙh)
+
+
   # ---------------------------- step 3. ------------------------------------#
   # work out the δA and then compute the B' = B₀ + ∇ × δA
   ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
-  ComputeδB!(λₙ, Ax, Ay, Az, 
-             bx, by, bz, bxh, byh, bzh,
-             vars, params, grid; 
-             λBxh = sk1, λByh = sk2, λBzh = sk3,
-             λAxh = sk4, λAyh = sk5, λAzh = sk6,
-             δAxh = Axh, δAyh = Ayh, δAzh = Azh)
+  #ComputeδB!(λₙ, Ax, Ay, Az, 
+  #           bx, by, bz, bxh, byh, bzh,
+  #           vars, params, grid; 
+  #           λBxh = sk1, λByh = sk2, λBzh = sk3,
+  #           λAxh = sk4, λAyh = sk5, λAzh = sk6,
+  #           δAxh = Axh, δAyh = Ayh, δAzh = Azh)
 
-    return nothing
-
+  return ∂ᵢD₁ᵢⱼ∂ⱼλₙh
 end
 
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
@@ -179,7 +182,7 @@ function Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λ,
   for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))
     @. λbᵢ = λ*bᵢ
     mul!(λbᵢh, grid.rfftplan, λbᵢ)
-    @. ∇⁻²∇λBh += im*kᵢ*λbᵢh*k⁻²
+    @. ∇⁻²∇λBh += -im*kᵢ*λbᵢh*k⁻² # note: -1 is coming  ∇⁻²
   end
 
   for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))

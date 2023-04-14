@@ -28,7 +28,7 @@ end
 # g = λ + 2C₁λ + 2C₀λ - D₀ᵢⱼkᵢkⱼλ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB))) (k) 
 # If the equation converage, g(λₙ₊₁) = λₙ 
 # In this case, we adopt the fix point method.
-function HmCorrection!(prob; ε = 1f-10)
+function HmCorrection!(prob; ε = 1f-4)
   square_mean(A,B,C) = mapreduce((x,y,z)->x*x+y*y+z*z,+,A,B,C)/length(A)
   L2_err_max(dA) =  mapreduce(x->x*x, max, dA)
   δ(a::Int,b::Int) = ( a == b ? 1 : 0 )
@@ -99,7 +99,7 @@ function HmCorrection!(prob; ε = 1f-10)
   @. ΔHh = Hh - H₀h # imag space
   dealias!(ΔHh, grid)  
   ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
-  @. λₙ  = -λₙ/2  # eq. 27
+  @. λₙ  = λₙ/2 ;  # eq. 27
   mul!(λₙh, grid.rfftplan, λₙ)
 
   # ---------------------------- step 2. ------------------------------------#
@@ -109,7 +109,7 @@ function HmCorrection!(prob; ε = 1f-10)
   @. λh_next = 0
   @.       I = 1
   A² = @. Ax*Ax + Ay*Ay + Az*Az
-  for i = 1:3
+  while err > ε
         
     # compute the C₁λₙ term
     ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh))
@@ -136,33 +136,46 @@ function HmCorrection!(prob; ε = 1f-10)
        
     #  λₙ₊₁ = g = λₙ +  ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
     # I can just take 19...   
-    @. λh_next = λₙh - ΔHh - B∇∇⁻²∇λBh + 2*C₁λₙh + ∂ᵢD₁ᵢⱼ∂ⱼλₙh
+    @. λh_next = λₙh + 5e-3*(@. ΔHh + B∇∇⁻²∇λBh - 2*C₁λₙh - ∂ᵢD₁ᵢⱼ∂ⱼλₙh)
     #@. λh_next = (ΔHh .- 2*C₁λₙh .+ ∂ᵢD₁ᵢⱼ∂ⱼλₙh .+ B∇∇⁻²∇λBh)/(2*C₀ .- kᵢkⱼD₀ᵢⱼ)
         
     # compute the rms error in real space      
     @. Δλh = λh_next - λₙh
     ldiv!(Δλ, grid.rfftplan, Δλh)
-    err = maximum(Δλ.^2)
-    #@show sum(isnan.(λh_next))
-    @show sqrt(err)
+    err = sqrt(maximum(Δλ.^2))
+
     # data movement for next iteration
     copyto!(λₙh, λh_next)
     @. λh_next  = 0
     dealias!(λₙh, grid)
   end
 
-
   # ---------------------------- step 3. ------------------------------------#
   # work out the δA and then compute the B' = B₀ + ∇ × δA
   ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
-  #ComputeδB!(λₙ, Ax, Ay, Az, 
-  #           bx, by, bz, bxh, byh, bzh,
-  #           vars, params, grid; 
-  #           λBxh = sk1, λByh = sk2, λBzh = sk3,
-  #           λAxh = sk4, λAyh = sk5, λAzh = sk6,
-  #           δAxh = Axh, δAyh = Ayh, δAzh = Azh)
+  ComputeδB!(λₙ, Ax, Ay, Az, 
+             bx, by, bz, bxh, byh, bzh,
+             vars, params, grid; 
+             λBxh = sk1, λByh = sk2, λBzh = sk3,
+             λAxh = sk4, λAyh = sk5, λAzh = sk6,
+             δAxh = Axh, δAyh = Ayh, δAzh = Azh)
 
-  return ∂ᵢD₁ᵢⱼ∂ⱼλₙh
+  #----------------------------- step 4. ------------------------------------#
+  # compute the new Helicity in K-space and move it back to H₀h for next iteration
+  # Q. I skipped the calculation of ∇∇⁻²∇⋅λB, does it affect the helicity? 
+  @. Axh = im*(ky*bzh - kz*byh)*k⁻²
+  @. Ayh = im*(kz*bxh - kx*bzh)*k⁻²
+  @. Azh = im*(kx*byh - ky*bxh)*k⁻²
+  ldiv!(Ax, grid.rfftplan, deepcopy(Axh))  
+  ldiv!(Ay, grid.rfftplan, deepcopy(Ayh))
+  ldiv!(Az, grid.rfftplan, deepcopy(Azh))
+
+  # Compute the magnetic helicity 
+  H  = @. Ax*bx + Ay*by + Az*bz
+
+  mul!(H₀h, grid.rfftplan, H)
+
+  return nothing
 end
 
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
@@ -184,7 +197,8 @@ function Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λ,
     mul!(λbᵢh, grid.rfftplan, λbᵢ)
     @. ∇⁻²∇λBh += -im*kᵢ*λbᵢh*k⁻² # note: -1 is coming  ∇⁻²
   end
-
+  dealias!(∇⁻²∇λBh, grid)
+  
   for (kᵢ,bᵢ) ∈ zip((kx,ky,kz),(bx,by,bz))
     
     @. ∂ᵢ∇⁻²∇λBh = im*kᵢ*∇⁻²∇λBh
@@ -198,7 +212,8 @@ function Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λ,
     B∇∇⁻²∇λBh += Bᵢ∂ᵢ∇⁻²∇λBh
 
   end
-
+  dealias!(B∇∇⁻²∇λBh, grid)
+    
   return nothing 
 
 end
@@ -207,7 +222,7 @@ end
 function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, λh, D₁ᵢⱼ, kᵢ, kⱼ, params, vars, grid)
   # 2 real and 2 imag sketch array
   ∂ⱼλₙh = D₁ᵢⱼ∂ⱼλₙh = vars.nonlinh1  
-  ∂ⱼλₙ  = D₁ᵢⱼ∂ⱼλₙ = vars.nonlin1
+  ∂ⱼλₙ  = D₁ᵢⱼ∂ⱼλₙ  = vars.nonlin1
 
   @. ∂ⱼλₙh = im*kⱼ*λh
 
@@ -218,7 +233,9 @@ function Get_the_∂ᵢD₁ᵢⱼ∂ⱼλₙ_term!(∂ᵢD₁ᵢⱼ∂ⱼλₙh,
   mul!(D₁ᵢⱼ∂ⱼλₙh, grid.rfftplan, D₁ᵢⱼ∂ⱼλₙ)
 
   @. ∂ᵢD₁ᵢⱼ∂ⱼλₙh += im*kᵢ*D₁ᵢⱼ∂ⱼλₙh
-
+    
+  dealias!(∂ᵢD₁ᵢⱼ∂ⱼλₙh, grid)
+    
   return nothing 
 
 end

@@ -61,7 +61,7 @@ Funtion of computing ∇ ⋅ ⃗A⃗using the fourier method
 - `T` : Data Type of the input Array
 """
 function Div(B1::Array,B2::Array,B3::Array;
-             Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
+             Lx = 2π, Ly = Lx, Lz = Lx,T = eltype(B1))
     nx,ny,nz = size(B1);
     grid = GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
     cB1 = Div(B1,B2,B3,grid);

@@ -52,6 +52,7 @@ include("utils/GeometryFunction.jl")
 include("utils/IC.jl")
 include("utils/UserInterface.jl")
 include("utils/TurbStatTool.jl")
+include("utils/MagneticHelicityCorrection.jl")
 
 #pgen module
 include("pgen/A99ForceDriving_GPU.jl")

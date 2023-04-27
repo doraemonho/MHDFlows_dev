@@ -18,13 +18,13 @@ function GetA99LSvars_And_function(::Dev, nx::Int,ny::Int,nz::Int; T = Float32, 
   A99 = A99LS_vars(A,b,e2x,e2y,e2z);
 
   if C
-    return  A99, A99ForceDriving_Compressible!
+    return  A99, A99LSForceDriving_Compressible!
   else
-    return  A99, A99ForceDriving!;  
+    return  A99, A99LSForceDriving!;  
   end
 end
 
-function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
+function A99LSForceDriving!(N, sol, t, clock, vars, params, grid)
 
   # A99 Force
   randN = typeof(N) <: Array ? Base.rand : CUDA.rand;
@@ -42,7 +42,7 @@ function A99ForceDriving!(N, sol, t, clock, vars, params, grid)
   return nothing
 end
 
-function A99ForceDriving_Compressible!(N, sol, t, clock, vars, params, grid)
+function A99LSForceDriving_Compressible!(N, sol, t, clock, vars, params, grid)
 
   # A99 Force with the support of compressibiltiy
   randN = typeof(N) <: Array ? Base.rand : CUDA.rand;

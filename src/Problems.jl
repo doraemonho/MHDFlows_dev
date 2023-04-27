@@ -19,13 +19,11 @@ end
 
 CheckON(Flag_equal_to_True::Bool) = Flag_equal_to_True ? string("ON") : string("OFF")
 
-function CheckON(FlagA::Bool, FlagB::Bool, FlagE::Bool) 
+function CheckON(FlagB::Bool, FlagH::Bool, FlagE::Bool) 
   if FlagB 
     if FlagE ; return string("ON (EMHD)"); end
-    if FlagA ; return string("ON (Vector potential with Coulomb gauge)"); end
-               return string("ON (Ideal MHD)")
-  elseif FlagA
-    return string("ON (Vector potential with Coulomb gauge)")
+    if FlagH ; return string("ON (Ideal MHD + mangeic helicity conserved)");end
+    return string("ON (Ideal MHD)")
   else
     return string("OFF")
   end
@@ -70,8 +68,8 @@ Represents the Flag of a problem.
 $(TYPEDFIELDS)
 """
 struct Flag
-    "Vector Potential"
-     a :: Bool
+    "Magnetic Helicity"
+     h :: Bool
     "Magnetic Field"
      b :: Bool
      "EMHD Field"
@@ -123,7 +121,7 @@ to the time-stepper constructor.
 """
 function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::AbstractGrid{T}, 
                  vars=EmptyVars, params=EmptyParams, dev::Device=CPU(); 
-                 AFlag = false, BFlag = false, EFlag = false, VPFlag = false, 
+                 HFlag = false, BFlag = false, EFlag = false, VPFlag = false, 
                  CFlag = false, SFlag = false, DyeFlag = false, usr_func = [],
                  stepperkwargs...) where T
 
@@ -136,7 +134,7 @@ function MHDFLowsProblem(eqn::FourierFlows.Equation, stepper, dt, grid::Abstract
   end
   sol = zeros(dev, eqn.T, eqn.dims)
 
-  flag = Flag(AFlag, BFlag, EFlag, VPFlag, CFlag, SFlag)
+  flag = Flag(HFlag, BFlag, EFlag, VPFlag, CFlag, SFlag)
 
   dye = DyeContructer(dev, DyeFlag, grid)
 
@@ -150,7 +148,7 @@ show(io::IO, problem::MHDFlowsProblem) =
     print(io, "MHDFlows Problem\n",
     	    "  │    Funtions\n",
           "  │     ├ Compressibility: "*CheckON(problem.flag.c),'\n',
-          "  │     ├──────── B-field: "*CheckON(problem.flag.a, problem.flag.b,problem.flag.e),'\n',
+          "  │     ├──────── B-field: "*CheckON(problem.flag.b, problem.flag.h,problem.flag.e),'\n',
           "  │     ├────────── Shear: "*CheckON(problem.flag.s),'\n',
     		  "  ├─────├────── VP Method: "*CheckON(problem.flag.vp),'\n',
     		  "  │     ├──────────── Dye: "*CheckDye(problem.dye),'\n',

@@ -12,13 +12,13 @@ function SetMHDVars(::Dev, grid, usr_vars) where Dev
                 nonlin1, nonlinh1, usr_vars);
 end
 
-function SetAMHDVars(::Dev, grid, usr_vars) where Dev
+function SetHMHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
   @devzeros Dev T (grid.nx, grid.ny, grid.nz) ux  uy  uz  bx  by bz nonlin1
   @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm) nonlinh1 jxh jyh jzh Φh
   
-  return AMVars(  ux,  uy,  uz, bx,  by,  bz,
+  return HMVars(  ux,  uy,  uz, bx,  by,  bz, 
                  jxh, jyh, jzh, Φh,
                  nonlin1, nonlinh1, usr_vars);
 end
@@ -68,13 +68,13 @@ function SetCHDVars(::Dev, grid, usr_vars) where Dev
 end
 
 # Functions of setting up the Vars and Params struct
-function SetVars(dev, grid, usr_vars; B = false, A = false, E = false, VP = false, C =false)
+function SetVars(dev, grid, usr_vars; B = false, H = false, E = false, VP = false, C =false)
   if C 
     setvars = ifelse(B,SetCMHDVars,SetCHDVars)
   elseif E
     setvars = SetEMHDVars
-  elseif A
-    setvars = SetAMHDVars    
+  elseif H
+    setvars = SetHMHDVars    
   else
     setvars = ifelse(B,SetMHDVars,SetHDVars)
   end
@@ -82,7 +82,7 @@ function SetVars(dev, grid, usr_vars; B = false, A = false, E = false, VP = fals
 end
 
  function SetParams(::Dev, grid, calcF::Function, usr_params;
-                     A = false, B = false, VP = false, C = false, S = false, E = false,
+                     H = false, B = false, VP = false, C = false, S = false, E = false,
                      cₛ = 0, ν = 0, η = 0, nν = 0, nη = 0, hν = 0, hη = 0) where Dev
   T = eltype(grid);
   usr_param = typeof(usr_params)
@@ -90,7 +90,7 @@ end
   # define the debug timer
   to = TimerOutput();
 
-  if (B) || (A) || (E)
+  if (B) || (H) || (E)
     if (VP)  
       @devzeros Dev T (grid.nx, grid.ny, grid.nz) χ U₀x U₀y U₀z B₀x B₀y B₀z
       params = MHDParams_VP(ν, η, nν, nη, hν, hη, 1, 2, 3, 4, 5, 6, calcF, χ, U₀x, U₀y, U₀z, B₀x, B₀y, B₀z, usr_params, to)

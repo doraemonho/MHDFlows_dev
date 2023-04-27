@@ -23,7 +23,7 @@ struct MVars{Aphys, Atrans, usr_var} <: MHDVars
     usr_vars :: usr_var
 end
 
-struct AMVars{Aphys, Atrans, usr_var} <: MHDVars
+struct HMVars{Aphys, Atrans, usr_var} <: MHDVars
     "x-component of velocity"
         ux :: Aphys
     "y-component of velocity"
@@ -35,7 +35,7 @@ struct AMVars{Aphys, Atrans, usr_var} <: MHDVars
     "y-component of B-field"
         by :: Aphys
     "z-component of B-field"
-        bz :: Aphys
+        bz :: Aphys   
 
     "x-component of fourier ∇⨯B field"
        jxh :: Atrans

@@ -94,47 +94,6 @@ function SetUpProblemIC!(prob;  ρ = [],
       end
     end
   end
-
-  # inject A/B field
-  if prob.flag.a 
-    nx,ny,nz = prob.grid.nx,prob.grid.ny,prob.grid.nz
-    T        = eltype(prob.grid)
-    _inject_a_ = false
-    for (aᵢ,bᵢ) in zip([ax,ay,az],[bx,by,bz])
-      # check if both ai and bi is filled
-      @assert !( aᵢ != [] && bᵢ != [])
-      _inject_a_ = aᵢ != [] ? true : false
-    end
-
-    if _inject_a_
-       as = Array{T, 3}[] 
-      for aᵢ ∈ [ax,ay,az]
-        aᵢ == [] ? push!(as,zeros(T, (nx,ny,nz))) : push!(as, aᵢ) 
-      end
-      bx,by,bz = Curl(as[1],as[2],as[3])
-      copyto!(vars.bx, bx)  
-      copyto!(vars.by, by)  
-      copyto!(vars.bz, bz)  
-      mul!(@views sol[:, :, :, bx_ind], grid.rfftplan, CuArray(as[1]))
-      mul!(@views sol[:, :, :, by_ind], grid.rfftplan, CuArray(as[2]))
-      mul!(@views sol[:, :, :, bz_ind], grid.rfftplan, CuArray(as[3]))
-
-    else
-      bs = Array{T, 3}[] 
-      for bᵢ ∈ [bx,by,bz]
-        bᵢ == [] ? push!(bs,zeros(T, (nx,ny,nz))) : push!(bs, bᵢ) 
-      end
-      ax,ay,az = VectorPotential(bs[1],bs[2],bs[3])
-      copyto!(vars.bx, bs[1])  
-      copyto!(vars.by, bs[2])  
-      copyto!(vars.bz, bs[3])  
-      mul!( (@views sol[:, :, :, params.bx_ind]), grid.rfftplan, CuArray(ax))
-      mul!( (@views sol[:, :, :, params.by_ind]), grid.rfftplan, CuArray(ay))
-      mul!( (@views sol[:, :, :, params.bz_ind]), grid.rfftplan, CuArray(az))
-    end
-
-  end
-
   if prob.flag.vp
     for (Uᵢ,prob_Uᵢ) in zip([U₀x,U₀y,U₀z],
                             [params.U₀x,params.U₀y,params.U₀z])

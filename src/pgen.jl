@@ -184,7 +184,7 @@ function EMHDcalcN!(N, sol, t, clock, vars, params, grid)
   
   dealias!(sol, grid)
   
-  MHDSolver.EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
+  EMHDSolver.EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   
   return nothing
 end

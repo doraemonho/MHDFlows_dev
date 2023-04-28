@@ -34,9 +34,11 @@ include("Structure/MHDVars.jl")
 include("Solver/VPSolver.jl");
 include("Solver/HDSolver.jl");
 include("Solver/MHDSolver.jl");
+include("Solver/EMHDSolver.jl");
 include("Solver/ShearingBox.jl");
 include("Solver/HDSolver_Compessible.jl");
 include("Solver/MHDSolver_Compessible.jl");
+
 # integrator related
 include("DiagnosticWrapper.jl")
 include("integrator.jl")

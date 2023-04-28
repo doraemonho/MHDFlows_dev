@@ -11,7 +11,8 @@ export
 
 using
   CUDA,
-  TimerOutputs
+  TimerOutputs,
+  FourierFlows
 
 using LinearAlgebra: mul!, ldiv!
 include("VPSolver.jl")

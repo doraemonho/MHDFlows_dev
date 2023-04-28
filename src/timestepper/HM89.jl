@@ -4,20 +4,23 @@
 # ----------
 
 struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
-  F₀  :: T
-  F₁  :: T
-  B⁰  :: T
-  B¹  :: T
-  Bⁿ  :: T
-   c  :: TL
+  F₀    :: T
+  F₁    :: T
+  Bₘ₋₁  :: T
+  Bₘ    :: T
+  Bₘ₊₁  :: T
+  B₀    :: T
+  gₘ    :: T
+  gₘ₋₁  :: T
+  c     :: TL
 end
 
 function HM89TimeStepper(equation, dev::Device=CPU())
-  @devzeros typeof(dev) equation.T equation.dims  F₀  F₁  B⁰  B¹ Bⁿ 
+  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₁ Bₘ Bₘ₊₁ B₀ gₘ gₘ₋₁ 
 
   c = (1//3, 15//16, 8//15)
 
-  return HM89TimeStepper( F₀, F₁, B⁰, B¹, Bⁿ , c)
+  return HM89TimeStepper( F₀, F₁, Bₘ₋₁, Bₘ, Bₘ₊₁, B₀, gₘ, gₘ₋₁ , c)
 end
 
 function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, grid)
@@ -32,30 +35,42 @@ end
 
 function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   # we solve the equation using the most simplist 2nd order implicit methed: trapezoidal rule method
-  # Consider the y_{n+1} = y_n + (Δt/2)*(f(t_n, y_n) + f(t_{n+1}, y_{n+1})) = f(y)
-  # using fix point method, we define g = y_{n+1} - f(y)
-  # note : We arrive at y_{n + 1} = y_n + (Δt)*f(t_{n+1/2}, y_{n+1/2})) 
-  # If the y_n is convergence, y_{n+1} = y_{n}
-
+  # Consider the B_{n+1} = B_n + (Δt/2)*(f(y_{n+1/2})) = f(y), n is the time step n
+  # using secant method, we define g(B) = B - B₀ - (Δt/2)*f(B'), B' = B^{n+1/2} 
+  #  So that,  B_{m + 1} = B_m + g(B_m)*(B_m - B_{m-1})/(g(B_m) - g(B_{m-1})), be aware m is the iteration number m
+  # If the B_{m+1} is convergence, B_{m+1} = y_{m}
+  # We pick B_{m=0) = B₀, and B_{m=1} = RK3(B) as our first guess
 #-------------------------------------------------------------------------------------------#
   # Define the function and var that will be used
   square_mean(A,B,C) =  mapreduce((x,y,z)->√(x*x+y*y+z*z),max,A,B,C)
 
   t, Δt, c  = clock.t, clock.dt, ts.c
   
-  B⁰, B¹, Bⁿ = ts.B⁰, ts.B¹, ts.Bⁿ
+  gₘ₋₁, gₘ = ts.gₘ₋₁, ts.gₘ
+
+  B₀, Bₘ, Bₘ₋₁, Bₘ₊₁ = ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₊₁
 
   ΔBh, ∇XJXB =  ts.F₀, ts.F₁
 
   ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
   
-  # copy B⁰ from sol and get guess of B\^{n+1} from LSRK3 Method
-  copyto!(B⁰, sol)
+  # copy B⁰ from sol and get guess of B\^{m+1} from LSRK3 Method
+  copyto!(B₀, sol)
   LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
-  copyto!( B¹,  sol)
-  dealias!(B¹, grid)
-  B_half = sol
+  copyto!(Bₘ,  sol)
+  
+  # define the "pointer" and set up the B(m=0)
+  Bₕ = sol
+  @. Bₕ = B₀
+  @. Bₘ₋₁ = B₀
+  equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
+  @. gₘ₋₁ = Bₘ₋₁ - B₀ - Δt/2*∇XJXB
+
+  # delias the result before the iteration
+  dealias!(Bₘ₋₁, grid)
+  dealias!(gₘ₋₁, grid)
+  dealias!(Bₘ, grid)
 
   ε   = 1.0;
   err = 5e-4;
@@ -63,26 +78,30 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   while ε > err 
     
     # get the ∇×(J × B) term from B^{n+1/2}
-    @. B_half = (B⁰ + B¹)*0.5
-    equation.calcN!(∇XJXB, B_half, t, clock, vars, params, grid)
-
-    # get the term B\^ n + 1 and de-alias the result to avoid aliasing error
-    @. Bⁿ = B⁰ + Δt*∇XJXB
-    dealias!(Bⁿ, grid)
+    @. Bₕ = (B₀ + Bₘ)/2 
+    equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid) 
+  
+    @.   gₘ = Bₘ - B₀ - Δt/2*∇XJXB
+    dealias!(gₘ, grid)
+    # get the term B\^ m + 1 and de-alias the result to avoid aliasing error
+    @. Bₘ₊₁ = Bₘ + gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 
+    dealias!(Bₘ₊₁, grid)
 
     # compute the error
-    @. ΔBh = (Bⁿ - B¹)
+    @. ΔBh = (Bₘ₊₁ - Bₘ)
     ldiv!( ΔBx, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,1] ) )
     ldiv!( ΔBy, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,2] ) )
     ldiv!( ΔBz, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,3] ) ) 
     ε = square_mean(ΔBx, ΔBy, ΔBz)
 
-    # copy to Bⁿ to be B¹
-    copyto!(B¹, Bⁿ)
+    # swap the vars for the next iteration
+    copyto!(Bₘ₋₁, Bₘ)
+    copyto!(Bₘ, Bₘ₊₁)
+    copyto!(gₘ₋₁, gₘ)
   end
 
   #Compute the diffusion term and forcing using the explicit method 
-  copyto!(sol, B¹)
+  copyto!(sol, Bₘ)
   RK3linearterm!(sol, ts, clock, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
 

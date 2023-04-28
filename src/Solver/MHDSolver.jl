@@ -178,6 +178,8 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
 
   # define all the vars & sketch vars
   ∂H∂t = @view N[:,:,:,7]
+  dealias!(sol, grid)
+  dealias!(  N, grid)
   
   # Imag space vars
   # ∇XE already computed in the induction equation 

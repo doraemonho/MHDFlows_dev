@@ -65,7 +65,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   @. Bₕ = B₀
   @. Bₘ₋₁ = B₀
   equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-  @. gₘ₋₁ = Bₘ₋₁ - B₀ - Δt/2*∇XJXB
+  @. gₘ₋₁ = Bₘ₋₁ - B₀ - Δt*∇XJXB
 
   # delias the result before the iteration
   dealias!(Bₘ₋₁, grid)
@@ -81,7 +81,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @. Bₕ = (B₀ + Bₘ)/2 
     equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid) 
   
-    @.   gₘ = Bₘ - B₀ - Δt/2*∇XJXB
+    @.   gₘ = Bₘ - B₀ - Δt*∇XJXB
     dealias!(gₘ, grid)
     # get the term B\^ m + 1 and de-alias the result to avoid aliasing error
     @. Bₘ₊₁ = Bₘ - gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 

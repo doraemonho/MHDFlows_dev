@@ -3,6 +3,8 @@ module EMHDSolver
 # Implicit Solver for 3D Electron Magnetohydrodynamics Problem
 # ----------
 
+using LinearAlgebra: mul!, ldiv!
+
 # Advection function for EMHD system
 # For E-MHD system, the induction will be changed into
 #  ∂B/∂t = -dᵢ * ∇× [ (∇× B) × B ] + η ∇²B

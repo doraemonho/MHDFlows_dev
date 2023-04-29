@@ -89,6 +89,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
     # compute the error
     @. ΔBh = (Bₘ₊₁ - Bₘ)
+    dealias!(ΔBh, grid)
     ldiv!( ΔBx, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,1] ) )
     ldiv!( ΔBy, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,2] ) )
     ldiv!( ΔBz, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,3] ) ) 
@@ -98,6 +99,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     copyto!(Bₘ₋₁, Bₘ)
     copyto!(Bₘ, Bₘ₊₁)
     copyto!(gₘ₋₁, gₘ)
+    @show ε
   end
 
   #Compute the diffusion term and forcing using the explicit method 

@@ -73,7 +73,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   dealias!(Bₘ, grid)
 
   ε   = 1.0;
-  err = 5e-4;
+  err = 5e-7;
 
   while ε > err 
     

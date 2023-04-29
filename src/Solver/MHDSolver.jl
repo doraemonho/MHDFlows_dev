@@ -248,7 +248,7 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
     mul!(εᵢh, grid.rfftplan, εᵢ)
     @. Φh -= im*kᵢ*εᵢh*k⁻²
   end
-
+  dealias!(Φh, grid)
   # compute B⋅∇Φ
   @. B_dot_∇Φ = 0
   for (kᵢ, Bᵢ) ∈ zip( (kx,ky,kz), (bx,by,bz) )

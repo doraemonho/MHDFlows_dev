@@ -65,7 +65,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   @. Bₕ = B₀
   @. Bₘ₋₁ = B₀
   equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-  @. gₘ₋₁ = Bₘ₋₁ - B₀ - Δt*∇XJXB
+  @. gₘ₋₁ = 0
 
   # delias the result before the iteration
   dealias!(Bₘ₋₁, grid)
@@ -73,7 +73,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   dealias!(Bₘ, grid)
 
   ε   = 1.0;
-  err = 1e-5;
+  err = 1e-4;
 
   while ε > err 
     
@@ -99,8 +99,10 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     copyto!(Bₘ₋₁, Bₘ)
     copyto!(Bₘ, Bₘ₊₁)
     copyto!(gₘ₋₁, gₘ)
-    @show ε
+    #@show ε
   end
+
+  if isinf(ε) || isnan(ε); error("No Convergence!"); end
 
   #Compute the diffusion term and forcing using the explicit method 
   copyto!(sol, Bₘ)

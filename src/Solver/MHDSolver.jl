@@ -237,7 +237,7 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
     @. ∂H∂t -= B_dot_Eh
   end
 
-  B_dot_∇Φᵢh = Φh = vars.nonlinh1
+  B_dot_∇Φh  = Φh = vars.nonlinh1
   εᵢh = ∇Φᵢh = params.usr_params.H₀h
   B_dot_∇Φ   =  @view params.usr_params.Dᵢⱼ[:,:,:,2,2]
   ∇Φᵢ  = @view params.usr_params.Dᵢⱼ[:,:,:,2,1]

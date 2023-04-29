@@ -237,6 +237,29 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
     @. ∂H∂t -= B_dot_Eh
   end
 
+  B_dot_∇Φᵢh = Φh = var.nonlinh1
+  εᵢh = ∇Φᵢh = @view params.usr_params.H₀h
+  B_dot_∇Φᵢ =  @view params.usr_params.Dᵢⱼ[:,:,:,2,2]
+  ∇Φᵢ  = @view params.usr_params.Dᵢⱼ[:,:,:,2,1]
+
+  # compute Φ
+  @. Φh = 0
+  for (kᵢ, εᵢ) ∈ zip( (kx,ky,kz), (Ex,Ey,Ez) )
+    mul!(εᵢh, grid.rfftplan, εᵢ)
+    @. Φh -= im*kᵢ*εᵢh*k⁻²
+  end
+
+  # compute B⋅∇Φ
+  @. B_dot_∇Φᵢ = 0
+  for (kᵢ, Bᵢ) ∈ zip( (kx,ky,kz), (bx,by,bz) )
+    @. ∇Φᵢh = im * kᵢ* Φh
+    ldiv!(∇Φᵢ, grid.rfftplan, deepcopy(∇Φᵢh))
+    @. B_dot_∇Φ += Bᵢ*∇Φᵢ
+  end
+
+  mul!(B_dot_∇Φh, grid.rfftplan,B_dot_∇Φ)
+  @. ∂H∂t -= B_dot_∇Φh
+
   return nothing 
 
 end

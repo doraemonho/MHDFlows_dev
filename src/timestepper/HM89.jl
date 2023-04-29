@@ -39,7 +39,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   # using secant method, we define g(B) = B - B₀ - (Δt/2)*f(B'), B' = B^{n+1/2} 
   #  So that,  B_{m + 1} = B_m - g(B_m)*(B_m - B_{m-1})/(g(B_m) - g(B_{m-1})), be aware m is the iteration number m
   # If the B_{m+1} is convergence, B_{m+1} = y_{m}
-  # We pick B_{m=0) = B₀, and B_{m=1} = RK3(B) as our first guess
+  # We pick B_{m=0} = Euler(B₀), and B_{m=1} = RK3(B) as our first guess
 #-------------------------------------------------------------------------------------------#
   # Define the function and var that will be used
   square_mean(A,B,C) =  mapreduce((x,y,z)->√(x*x+y*y+z*z),max,A,B,C)
@@ -54,18 +54,19 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
   ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
   
-  # copy B⁰ from sol and get guess of B\^{m+1} from LSRK3 Method
+  # copy B⁰ from sol and get guess of B(m=1) from LSRK3 Method
   copyto!(B₀, sol)
   LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
   copyto!(Bₘ,  sol)
   
-  # define the "pointer" and set up the B(m=0)
+  # define the "pointer" and set up the guess of B(m=0) from Euler Method
   Bₕ = sol
-  @. Bₕ = B₀
-  @. Bₘ₋₁ = B₀
   equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-  @. gₘ₋₁ = 0
+  @. Bₘ₋₁ = B₀ + Δt*∇XJXB
+  @. Bₕ = (B₀ + Bₘ₋₁)/2
+  equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
+  @. gₘ₋₁ = Bₘ₋₁ - B₀ - Δt*∇XJXB
 
   # delias the result before the iteration
   dealias!(Bₘ₋₁, grid)
@@ -73,7 +74,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   dealias!(Bₘ, grid)
 
   ε   = 1.0;
-  err = 1e-4;
+  err = 5e-5;
 
   while ε > err 
     

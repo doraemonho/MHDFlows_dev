@@ -37,7 +37,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   # we solve the equation using the most simplist 2nd order implicit methed: trapezoidal rule method
   # Consider the B_{n+1} = B_n + (Δt/2)*(f(y_{n+1/2})) = f(y), n is the time step n
   # using secant method, we define g(B) = B - B₀ - (Δt/2)*f(B'), B' = B^{n+1/2} 
-  #  So that,  B_{m + 1} = B_m + g(B_m)*(B_m - B_{m-1})/(g(B_m) - g(B_{m-1})), be aware m is the iteration number m
+  #  So that,  B_{m + 1} = B_m - g(B_m)*(B_m - B_{m-1})/(g(B_m) - g(B_{m-1})), be aware m is the iteration number m
   # If the B_{m+1} is convergence, B_{m+1} = y_{m}
   # We pick B_{m=0) = B₀, and B_{m=1} = RK3(B) as our first guess
 #-------------------------------------------------------------------------------------------#
@@ -84,7 +84,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @.   gₘ = Bₘ - B₀ - Δt/2*∇XJXB
     dealias!(gₘ, grid)
     # get the term B\^ m + 1 and de-alias the result to avoid aliasing error
-    @. Bₘ₊₁ = Bₘ + gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 
+    @. Bₘ₊₁ = Bₘ - gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 
     dealias!(Bₘ₊₁, grid)
 
     # compute the error

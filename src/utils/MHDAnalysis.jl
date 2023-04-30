@@ -133,7 +133,6 @@ function VectorPotential(B1::Array{T,3},B2::Array{T,3},B3::Array{T,3};L=2π) whe
   return A1,A2,A3;
 end
 
-
 function VectorPotential(B1,B2,B3,grid)
 #=   
     funtion of computing B = ∇ × A using the fourier method
@@ -154,6 +153,7 @@ function VectorPotential(B1,B2,B3,grid)
 
   @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h B2h B3h Axh Ayh Azh
   @devzeros typeof(dev)         T  (         nx,ny,nz)  A1  A2  A3
+  
   mul!(B1h, grid.rfftplan, B1); 
   mul!(B2h, grid.rfftplan, B2); 
   mul!(B3h, grid.rfftplan, B3);

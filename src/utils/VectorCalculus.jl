@@ -61,7 +61,7 @@ Funtion of computing ∇ ⋅ ⃗A⃗using the fourier method
 - `T` : Data Type of the input Array
 """
 function Div(B1::Array,B2::Array,B3::Array;
-             Lx = 2π, Ly = Lx, Lz = Lx,T = Float32)
+             Lx = 2π, Ly = Lx, Lz = Lx,T = eltype(B1))
     nx,ny,nz = size(B1);
     grid = GetSimpleThreeDGrid(nx, Lx, ny, Ly, nz, Lz, T = T);
     cB1 = Div(B1,B2,B3,grid);
@@ -101,30 +101,30 @@ function ∂i(B1::Array, direction; Lx = 2π, Ly = Lx, Lz = Lx,T = eltype(B1))
 end
 
 function ∂i(B1::Array,grid, direction)
-    # funtion of computing x/y/z-direction of ∇̇ ⋅ Vector using the fourier method
-    # fft(∂_i(Vector)) -> im * k_i ⋅ V
+  # funtion of computing x/y/z-direction of ∇̇ ⋅ Vector using the fourier method
+  # fft(∂_i(Vector)) -> im * k_i ⋅ V
 
-    nx,ny,nz = size(B1);
-    dev = typeof(B1) <: Array ? CPU() : GPU();
-    T   = eltype(grid);
+  nx,ny,nz = size(B1);
+  dev = typeof(B1) <: Array ? CPU() : GPU();
+  T   = eltype(grid);
 
-    @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h
-    @devzeros typeof(dev)         T  (         nx,ny,nz) cB1
-    
-    mul!(B1h, grid.rfftplan, B1);
-    kx,ky,kz = grid.kr,grid.l,grid.m;
-    if  direction == "x"
-      @. B1h = im*kx*B1h
-    elseif direction == "y"
-      @. B1h = im*ky*B1h
-    elseif direction =="z"
-      @. B1h = im*kz*B1h
-    else
-      error("Wrong driection declared")
-    end
-    ldiv!(cB1, grid.rfftplan, B1h); 
+  @devzeros typeof(dev) Complex{T} (div(nx,2)+1,ny,nz) B1h
+  @devzeros typeof(dev)         T  (         nx,ny,nz) cB1
+  
+  mul!(B1h, grid.rfftplan, B1);
+  kx,ky,kz = grid.kr,grid.l,grid.m;
+  if  direction == "x"
+    @. B1h = im*kx*B1h
+  elseif direction == "y"
+    @. B1h = im*ky*B1h
+  elseif direction =="z"
+    @. B1h = im*kz*B1h
+  else
+    error("Wrong driection declared")
+  end
+  ldiv!(cB1, grid.rfftplan, B1h); 
 
-    return cB1
+  return cB1
 end
 
 
@@ -178,48 +178,4 @@ end
 
 function Dotproduct(A1,A2,A3,B1,B2,B3)
     return A1.*B1 + A2.*B2 + A3.*B3 
-end
-
-function DivVCorrection!(ux,uy,uz,grid)
-#= 
-   Possion Solver for periodic boundary condition
-   As in VP method, ∇ ⋅ V = 0 may not hold, V = ∇×Ψ + ∇Φ -> ∇ ⋅ V = ∇² Φ
-   We need to find Φ and remove it using a Poission Solver 
-   Here we are using the Fourier Method to find the Φ
-   In Real Space,  
-   ∇² Φ = ∇ ⋅ V   
-   In k-Space,  
-   ∑ᵢ -(kᵢ)² Φₖ = i∑ᵢ kᵢ(Vₖ)ᵢ
-   Φₖ = i∑ᵢ kᵢ(Vₖ)ᵢ/k²
-   Vⱼ_new = Vₖⱼ + kⱼ i∑ᵢ kᵢ(Vₖ)ᵢ/k²; 
-=#  
-
-  T = eltype(grid);  
-  nx,ny,nz = grid.nx,grid.ny,grid.nz;  
-  uxh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-  uyh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-  uzh = zeros(Complex{T},(div(nx,2)+1,ny,nz));
-  mul!(uxh, grid.rfftplan, ux); 
-  mul!(uyh, grid.rfftplan, uy); 
-  mul!(uzh, grid.rfftplan, uz);
-
-  #find Φₖ
-  kᵢ,kⱼ,kₖ = grid.kr,grid.l,grid.m;
-  k⁻² = grid.invKrsq;
-  ∑ᵢkᵢUᵢh_k² = 0 .*copy(uxh);
-  ∑ᵢkᵢUᵢ_k²  = 0 .*copy(ux);  
-    
-  ∑ᵢkᵢUᵢh_k² = @. im*(kᵢ*uxh + kⱼ*uyh + kₖ*uzh);
-  ∑ᵢkᵢUᵢh_k² = @. -∑ᵢkᵢUᵢh_k²*k⁻²;  # Φₖ
-  
-  # B  = B* - ∇Φ = Bᵢ - kᵢΦₖ  
-  uxh  .-= kᵢ.*∑ᵢkᵢUᵢh_k²;
-  uyh  .-= kⱼ.*∑ᵢkᵢUᵢh_k²;
-  uzh  .-= kₖ.*∑ᵢkᵢUᵢh_k²;
-  
-  #Update to Real Space vars
-  ldiv!(ux, grid.rfftplan, deepcopy(uxh));# deepcopy() since inverse real-fft destroys its input
-  ldiv!(uy, grid.rfftplan, deepcopy(uyh));# deepcopy() since inverse real-fft destroys its input
-  ldiv!(uz, grid.rfftplan, deepcopy(uzh));# deepcopy() since inverse real-fft destroys its input
-  return ux,uy,uz
 end

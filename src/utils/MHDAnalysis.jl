@@ -128,7 +128,7 @@ Warning : We are assuming the Coulomb gauge ∇ ⋅ A = 0
 function VectorPotential(B1::Array{T,3},B2::Array{T,3},B3::Array{T,3};L=2π) where T
   # Wrapper of actual Vector Potential function
   nx,ny,nz = size(B1);
-  grid = ThreeDGrid(nx, L; T = T);
+  grid = ThreeDGrid(; nx=nx, Lx=L, T = T);
   A1,A2,A3 = VectorPotential(B1,B2,B3,grid);
   return A1,A2,A3;
 end

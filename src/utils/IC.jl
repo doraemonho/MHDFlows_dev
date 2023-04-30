@@ -64,7 +64,7 @@ function SetUpProblemIC!(prob;  ρ = [],
       copyto!(prob.dye.ρ, ρ);
       mul!(prob.dye.tmp.sol₀, grid.rfftplan, prob.dye.ρ);
       dealias!(prob.dye.tmp.sol₀, grid)
-      ldiv!(prob.dye.ρ, grid.rfftplan,deepcopy!(prob.dye.tmp.sol₀))
+      ldiv!(prob.dye.ρ, grid.rfftplan,deepcopy(prob.dye.tmp.sol₀))
     end
   end
 
@@ -83,7 +83,7 @@ function SetUpProblemIC!(prob;  ρ = [],
           mul!(sol₀ , grid.rfftplan, prob_uᵢ);
         end
         dealias!(sol₀, grid)
-        ldiv!(prob_uᵢ, grid.rfftplan,deepcopy!(sol₀))
+        ldiv!(prob_uᵢ, grid.rfftplan,deepcopy(sol₀))
       end
     end
   end
@@ -97,7 +97,7 @@ function SetUpProblemIC!(prob;  ρ = [],
         mul!(sol₀ , grid.rfftplan, prob_bᵢ);
       end
       dealias!(sol₀, grid)
-      ldiv!(prob_bᵢ, grid.rfftplan,deepcopy!(sol₀))
+      ldiv!(prob_bᵢ, grid.rfftplan,deepcopy(sol₀))
     end
   end
   if prob.flag.vp

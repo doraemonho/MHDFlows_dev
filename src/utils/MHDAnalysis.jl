@@ -165,7 +165,11 @@ function VectorPotential(B1,B2,B3,grid)
   @. Axh = im*(ky*B3h - kz*B2h)*k⁻²;
   @. Ayh = im*(kz*B1h - kx*B3h)*k⁻²;
   @. Azh = im*(kx*B2h - ky*B1h)*k⁻²;
-
+  
+  dealias!(Axh, grid)
+  dealias!(Ayh, grid)
+  dealias!(Azh, grid)
+  
   ldiv!(A1, grid.rfftplan, deepcopy(Axh));  
   ldiv!(A2, grid.rfftplan, deepcopy(Ayh));
   ldiv!(A3, grid.rfftplan, deepcopy(Azh));

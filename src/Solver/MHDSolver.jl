@@ -219,6 +219,9 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
   @. Ex = vy*bz - vz*by - η*Jx
   @. Ey = vz*bx - vx*bz - η*Jy
   @. Ez = vx*by - vy*bx - η*Jz
+  Realvar_dealias!(Ex, grid; cache = vars.nonlinh1)
+  Realvar_dealias!(Ey, grid; cache = vars.nonlinh1)
+  Realvar_dealias!(Ez, grid; cache = vars.nonlinh1)
 
   # work out the actual advection
   @. ∂H∂t = 0
@@ -311,6 +314,13 @@ function HMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   HUpdate!(N, sol, t, clock, vars, params, grid)  
 
   return nothing
+end
+
+function Realvar_dealias!(A, grid::FourierFlows.ThreeDGrid; cache = [])
+  mul!(cache, grid.rfftplan, A)
+  dealias!(cache, grid)
+  ldiv!(A, grid.rfftplan, cache)
+  return nothing  
 end
 
 end

@@ -74,7 +74,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   dealias!(Bₘ, grid)
 
   ε   = 1.0;
-  err = 5e-5;
+  err = 5e-4;
 
   while ε > err 
     
@@ -85,7 +85,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @.   gₘ = Bₘ - B₀ - Δt*∇XJXB
     dealias!(gₘ, grid)
     # get the term B\^ m + 1 and de-alias the result to avoid aliasing error
-    @. Bₘ₊₁ = Bₘ - 1e-1*gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 
+    @. Bₘ₊₁ = Bₘ - gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 
     dealias!(Bₘ₊₁, grid)
 
     # compute the error

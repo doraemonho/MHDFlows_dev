@@ -100,7 +100,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     copyto!(Bₘ₋₁, Bₘ)
     copyto!(Bₘ, Bₘ₊₁)
     copyto!(gₘ₋₁, gₘ)
-    #@show ε
+    @show ε
   end
 
   if isinf(ε) || isnan(ε); error("No Convergence!"); end

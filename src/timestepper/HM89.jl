@@ -59,7 +59,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
   # define the "pointer" and set up the guess of B(m=0) from Euler Method
   @. xₘ₋₂ = sol
-  @. Bₕ   = xₙ₋₂/2 + B₀/2
+  @. Bₕ   = xₘ₋₂/2 + B₀/2
   equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
   @. xₘ₋₁ = B₀ + Δt*∇XJXB
 

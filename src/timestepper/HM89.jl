@@ -6,21 +6,20 @@
 struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
   F₀    :: T
   F₁    :: T
+  Bₘ₋₂  :: T
   Bₘ₋₁  :: T
   Bₘ    :: T
-  Bₘ₊₁  :: T
   B₀    :: T
-  gₘ    :: T
-  gₘ₋₁  :: T
+  y     :: T
   c     :: TL
 end
 
 function HM89TimeStepper(equation, dev::Device=CPU())
-  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₁ Bₘ Bₘ₊₁ B₀ gₘ gₘ₋₁ 
+  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₂ Bₘ₋₁ Bₘ B₀ y 
 
   c = (1//3, 15//16, 8//15)
 
-  return HM89TimeStepper( F₀, F₁, Bₘ₋₁, Bₘ, Bₘ₊₁, B₀, gₘ, gₘ₋₁ , c)
+  return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, c)
 end
 
 function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, grid)
@@ -46,9 +45,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
   t, Δt, c  = clock.t, clock.dt, ts.c
   
-  gₘ₋₁, gₘ = ts.gₘ₋₁, ts.gₘ
-
-  B₀, Bₘ, Bₘ₋₁, Bₘ₊₁ = ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₊₁
+  y, B₀, Bₘ, Bₘ₋₁, Bₘ₋₂ = ts.y, ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₋₂
 
   ΔBh, ∇XJXB =  ts.F₀, ts.F₁
 
@@ -59,37 +56,30 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
   copyto!(Bₘ,  sol)
-  
-  # define the "pointer" and set up the guess of B(m=0) from Euler Method
   Bₕ = sol
+
+  # define the "pointer" and set up the guess of B(m=0) from Euler Method
+  @. xₘ₋₂ = Bₘ
+  @. Bₕ   = xₙ₋₂/2 + B₀/2
   equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-  @. Bₘ₋₁ = B₀ + Δt*∇XJXB
-  @. Bₕ = (B₀ + Bₘ₋₁)/2
-  equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-  @. gₘ₋₁ = Bₘ₋₁ - B₀ - Δt*∇XJXB
+  @. xₘ₋₁ = B₀ + Δt*∇XJXB
 
   # delias the result before the iteration
-  dealias!(Bₘ₋₁, grid)
-  dealias!(gₘ₋₁, grid)
-  dealias!(Bₘ, grid)
+  dealias!(xₘ₋₂, grid)
+  dealias!(xₘ₋₁, grid)
 
   ε   = 1.0;
   err = 5e-4;
 
   while ε > err 
-    
-    # get the ∇×(J × B) term from B^{n+1/2}
-    @. Bₕ = (B₀ + Bₘ)/2 
-    equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid) 
-  
-    @.   gₘ = Bₘ - B₀ - Δt*∇XJXB
-    dealias!(gₘ, grid)
-    # get the term B\^ m + 1 and de-alias the result to avoid aliasing error
-    @. Bₘ₊₁ = Bₘ - gₘ*(Bₘ - Bₘ₋₁)/(gₘ - gₘ₋₁) 
-    dealias!(Bₘ₊₁, grid)
+
+    @. Bₕ   = xₘ₋₁/2 + B₀/2
+    equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
+    @. xₘ   = B₀ + Δt*∇XJXB
+    @. y    = xₘ₋₂ - (xₘ₋₁ - xₘ₋₂)^2/(xₘ - 2*xₘ₋₁ + xₘ₋₂)
 
     # compute the error
-    @. ΔBh = (Bₘ₊₁ - Bₘ)
+    @. ΔBh = (y - xₘ₋₂)
     dealias!(ΔBh, grid)
     ldiv!( ΔBx, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,1] ) )
     ldiv!( ΔBy, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,2] ) )
@@ -97,17 +87,16 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     ε = square_mean(ΔBx, ΔBy, ΔBz)
 
     # swap the vars for the next iteration
-    copyto!(Bₘ₋₁, Bₘ)
-    copyto!(Bₘ, Bₘ₊₁)
-    copyto!(gₘ₋₁, gₘ)
+    copyto!(xₘ₋₂, xₘ₋₁)
+    copyto!(xₘ₋₁, xₘ)
     @show ε
-    if isinf(ε) || isnan(ε); @show ΔBh[isinf.(ΔBh)] end
+
   end
 
   if isinf(ε) || isnan(ε); error("No Convergence!"); end
 
   #Compute the diffusion term and forcing using the explicit method 
-  copyto!(sol, Bₘ)
+  copyto!(sol, y)
   RK3linearterm!(sol, ts, clock, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
 

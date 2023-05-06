@@ -45,7 +45,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
   t, Δt, c  = clock.t, clock.dt, ts.c
   
-  y, B₀, Bₘ, Bₘ₋₁, Bₘ₋₂ = ts.y, ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₋₂
+  y, B₀, xₘ, xₘ₋₁, xₘ₋₂ = ts.y, ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₋₂
 
   ΔBh, ∇XJXB =  ts.F₀, ts.F₁
 

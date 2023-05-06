@@ -245,7 +245,9 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
   B_dot_∇Φ   =  @view params.usr_params.Dᵢⱼ[:,:,:,2,2]
   ∇Φᵢ  = @view params.usr_params.Dᵢⱼ[:,:,:,2,1]
 
-  # compute Φ
+  # compute Φ from  ∂H/∂t = -B ⋅ E + (∇ × E) ⋅ A
+  # since ∇ × E = ∇ × ∇ Φ = 0, the only term to compute will become
+  # - B ⋅ E = - B ⋅ ∇ Φ
   @. Φh = 0
   for (kᵢ, εᵢ) ∈ zip( (kx,ky,kz), (Ex,Ey,Ez) )
     mul!(εᵢh, grid.rfftplan, εᵢ)

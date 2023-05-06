@@ -14,7 +14,7 @@ function construct_function_for_struct(::Dev,nx::Int,ny::Int,nz::Int; T = Float3
  
   @devzeros Dev Complex{T} ( div(nx,2) + 1 , ny, nz    ) H₀h
   @devzeros Dev         T  (            nx , ny, nz    ) λₙ
-  @devzeros Dev         T  (            nx , ny, nz, 6 ) sk
+  @devzeros Dev         T  (            nx , ny, nz, 9 ) sk
   @devzeros Dev         T  (            nx , ny, nz, 3 , 3 ) Dᵢⱼ
   Hm = Hm_vars(λₙ, H₀h, sk, Dᵢⱼ)
 
@@ -25,13 +25,16 @@ end
 # note: this has a time constraint for weak field case from eq. 31
 # we have a slightly different implementation from their paper
 # we start from the equation 24. 
-# ΔH - 2C₁λ + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) - 2C₀λ + ∂ᵢD₀ᵢⱼ∂ⱼλ = 0
+# ΔH - 2C₁λ + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) - 2C₁λ + ∂ᵢD₀ᵢⱼ∂ⱼλ = 0
 # Where in k-space, we define a function g,
-# g = λ + 2C₁λ + 2C₀λ - D₀ᵢⱼkᵢkⱼλ  - (ΔH + ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB))) (k) 
-# If the equation converage, g(λₙ₊₁) = λₙ 
-# In this case, we adopt the fix point method.
-function HmCorrection!(prob; ε = 1f-6)
-  square_mean(A,B,C) = mapreduce((x,y,z)->x*x+y*y+z*z,+,A,B,C)/length(A)
+#  g =  ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0    
+# If the equation converage, we could to apply the secant method
+#
+#  λ_{n+1} = λ_{n} - g(λ_{n})*(λ_{n} - λ_{n-1})/(g(λ_{n}) - g(λ_{n-1}))
+#
+#
+function HmCorrection1!(prob; ε = 1f-2, f₀ = 5e-1)
+  square_mean(A,B,C) = mapreduce((x,y,z)->sqrt(x*x+y*y+z*z),+,A,B,C)/length(A)
   L2_err_max(dA) =  mapreduce(x->x*x, max, dA)
   δ(a::Int,b::Int) = ( a == b ? 1 : 0 )
     
@@ -42,9 +45,10 @@ function HmCorrection!(prob; ε = 1f-6)
   grid = prob.grid
   vars = prob.vars
   params = prob.params
-  sk_arr1,sk_arr2 = ts.RHS₁,ts.RHS₂
-  sk_arr3,sk_arr4 = ts.RHS₃,ts.RHS₄
-    
+  sk_arr1, sk_arr2 = ts.RHS₁,ts.RHS₂
+  sk_arr3, sk_arr4 = ts.RHS₃,ts.RHS₄
+  
+  dealias!(sol, grid)
   @views bxh,byh,bzh = sol[:,:,:,params.bx_ind], sol[:,:,:,params.by_ind], sol[:,:,:,params.bz_ind]
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
   ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
@@ -61,16 +65,16 @@ function HmCorrection!(prob; ε = 1f-6)
   @views sk1, sk2, sk3 = sk_arr2[:,:,:,1], sk_arr2[:,:,:,2], sk_arr2[:,:,:,3] 
   @views sk4, sk5, sk6 = sk_arr2[:,:,:,4], sk_arr2[:,:,:,5], sk_arr2[:,:,:,6]   
   @views Hh, ΔHh       = sk_arr3[:,:,:,1], sk_arr3[:,:,:,2]
-  @views λh_next, λₙh  = sk_arr3[:,:,:,3], sk_arr3[:,:,:,4]
-  @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh   = sk_arr3[:,:,:,5]
-  @views kᵢkⱼD₀ᵢⱼ, I   = sk_arr4[:,:,:,1], sk_arr4[:,:,:,2]
-  @views B∇∇⁻²∇λBh   = sk_arr4[:,:,:,3] 
+  @views λₙ₊₁h, λₙh, λₙ₋₁h  = sk_arr3[:,:,:,3], sk_arr3[:,:,:,4], sk_arr3[:,:,:,5]
+  @views gₙh, gₙ₋₁h     = sk_arr3[:,:,:,6], sk_arr3[:,:,:,7]
+  @views ∂ᵢD₁ᵢⱼ∂ⱼλₙh, kᵢkⱼD₀ᵢⱼ, B∇∇⁻²∇λBh   = sk_arr4[:,:,:,1], sk_arr3[:,:,:,2], sk_arr4[:,:,:,3]
   @views Δλh, C₁λₙh    = sk_arr4[:,:,:,4], sk_arr4[:,:,:,5] 
-  @views H₀h = sol[ :, :, :, 7] # be careful
+  @views H₀h = sol[ :, :, :, 7]
 
   # - real space sketch variables
   @views Jx, Jy, Jz = params.usr_params.sk[:,:,:,1], params.usr_params.sk[:,:,:,2], params.usr_params.sk[:,:,:,3]
   @views Ax, Ay, Az = params.usr_params.sk[:,:,:,4], params.usr_params.sk[:,:,:,5], params.usr_params.sk[:,:,:,6]
+  @views  H, A²,C₁λₙ = params.usr_params.sk[:,:,:,7], params.usr_params.sk[:,:,:,8], params.usr_params.sk[:,:,:,9]
   Dᵢⱼ = params.usr_params.Dᵢⱼ
   Δλ = vars.nonlin1
   λₙ = params.usr_params.λₙ
@@ -79,54 +83,57 @@ function HmCorrection!(prob; ε = 1f-6)
   # some preparation work for computing ΔH, C0, C1 D, λ₀
 
   # Compute Vector Potential & current by assuming the Coulomb gauge ∇ ⋅ A = 0
-  @. Jxh = im*(ky*bzh - kz*byh)
-  @. Jyh = im*(kz*bxh - kx*bzh)
-  @. Jzh = im*(kx*byh - ky*bxh)
+  @. Jxh = im*(ky*bzh - kz*byh) # it is fine
+  @. Jyh = im*(kz*bxh - kx*bzh) # it is fine
+  @. Jzh = im*(kx*byh - ky*bxh) # it is fine
   ldiv!(Jx, grid.rfftplan, deepcopy(Jxh))  
   ldiv!(Jy, grid.rfftplan, deepcopy(Jyh))
   ldiv!(Jz, grid.rfftplan, deepcopy(Jzh))
 
-  @. Axh = Jxh*k⁻²
-  @. Ayh = Jyh*k⁻²
-  @. Azh = Jzh*k⁻²
+  @. Axh = Jxh*k⁻² # it is fine
+  @. Ayh = Jyh*k⁻² # it is fine
+  @. Azh = Jzh*k⁻² # it is fine
   ldiv!(Ax, grid.rfftplan, deepcopy(Axh))  
   ldiv!(Ay, grid.rfftplan, deepcopy(Ayh))
   ldiv!(Az, grid.rfftplan, deepcopy(Azh))
   
   # C₁ = B^2 + J ⋅ A C₀
-  C₀ = 2 *square_mean(bx,by,bz)  #eq. 20
-  C₁  = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az  # eq. 21
+  C₁ = @. bx^2 + by^2 + bz^2 + Jx*Ax + Jy*Ay + Jz*Az  # eq. 21
+  Realvar_dealias!(C₁, grid; cache = vars.nonlinh1)   # C₁ dealias
+    
   # Compute the magnetic helicity 
-  H  = @. Ax*bx + Ay*by + Az*bz
+  @. H  =  Ax*bx + Ay*by + Az*bz
   mul!(Hh, grid.rfftplan, H)
   @. ΔHh = Hh - H₀h # imag space
   dealias!(ΔHh, grid)
-  @. ΔHh[k².>(grid.nx/4)^2] = 0  
   ldiv!(λₙ, grid.rfftplan, deepcopy(ΔHh))
-  @. λₙ  = λₙ/5   # eq. 27
+  λ₀ = std(H)*4
+  @. λₙ    = λₙ/5
   mul!(λₙh, grid.rfftplan, λₙ)
 
   #compute Dᵢⱼ
-  A² = @. Ax*Ax + Ay*Ay + Az*Az
+  @. A² = Ax*Ax + Ay*Ay + Az*Az
   for (Aᵢ, i) ∈ zip((Ax,Ay,Az), (1,2,3))
     for (Aⱼ, j) ∈ zip((Ax,Ay,Az), (1,2,3))
       @. Dᵢⱼ[:,:,:,i,j] =  Aᵢ*Aⱼ - δ(i,j)*A² 
+      Realvar_dealias!( view(Dᵢⱼ,:,:,:,i,j), grid; cache = vars.nonlinh1)   #Dᵢⱼ dealias      
     end
   end
-
+  
+  #-------------- Set up the first guess of secant method -------------------#
+  @. λₙ₋₁h = 0    
+  @. gₙ₋₁h = ΔHh
+    
   # ---------------------------- step 2. ------------------------------------#
   # compute the err and iterate the λ until it is converge 
   err = 1.0
   loop_i = 0
-  @. λh_next = 0
-  @.       I = 1
-  while err > ε
-        
+  while err > ε || loop_i < 20
     # compute the C₁λₙ term
     ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh))
-    C₁λₙ = @. C₁*λₙ 
+    @. C₁λₙ = C₁*λₙ 
     mul!(C₁λₙh, grid.rfftplan, C₁λₙ);   dealias!(C₁λₙh, grid);  
-
+        
     # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
     Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λₙ, 
                             bx ,by ,bz,
@@ -142,25 +149,29 @@ function HmCorrection!(prob; ε = 1f-6)
                                  kᵢ, kⱼ, params, vars, grid)
       end
     end
-    # ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
-       
-    #  λₙ₊₁ = g = λₙ +  ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0
-    # I can just take 19...   
-    @. λh_next = λₙh + 2e-3*(@. ΔHh + B∇∇⁻²∇λBh - 2*C₁λₙh - ∂ᵢD₁ᵢⱼ∂ⱼλₙh)
-    #@. λh_next = (ΔHh .- 2*C₁λₙh .+ ∂ᵢD₁ᵢⱼ∂ⱼλₙh .+ B∇∇⁻²∇λBh)/(2*C₀ .- kᵢkⱼD₀ᵢⱼ)
+
+    #  g =  ΔH - 2C₁λ - ∂ᵢD₁ᵢⱼ∂ⱼλ + B⋅∇(∇⁻²∇⋅(λB)) = 0    
+    @. gₙh =  ΔHh + B∇∇⁻²∇λBh - 2*C₁λₙh - ∂ᵢD₁ᵢⱼ∂ⱼλₙh
+        
+    # x_n+1 = x_n - f(x_1)*(x_1 - x_0)/(f(x_1) - f(x_0))
+    @.  λₙ₊₁h = λₙh .- gₙh*(λₙh .- λₙ₋₁h)/(gₙh .- gₙ₋₁h)
         
     # compute the rms error in real space      
-    @. Δλh = λh_next - λₙh
+    @. Δλh = λₙ₊₁h - λₙh
+    dealias!(Δλh, grid)    
     ldiv!(Δλ, grid.rfftplan, Δλh)
-    err = sqrt(maximum(Δλ.^2))
-
+    @. Δλ = sqrt(Δλ.^2) 
+    err = maximum(Δλ)/λ₀
+    
     # data movement for next iteration
-    copyto!(λₙh, λh_next)
-    @. λh_next  = 0
+    copyto!(λₙ₋₁h, λₙh)
+    copyto!(λₙh, λₙ₊₁h)
+    copyto!(gₙ₋₁h, gₙh)
     dealias!(λₙh, grid)
     loop_i += 1
   end
-  @show loop_i
+  if isnan(err) || isinf(err); error("Mangtic Helicty correction scheme : err = Inf/Nan!");end
+
   # ---------------------------- step 3. ------------------------------------#
   # work out the δA and then compute the B' = B₀ + ∇ × δA
   ldiv!(λₙ, grid.rfftplan, deepcopy(λₙh)) 
@@ -176,10 +187,11 @@ function HmCorrection!(prob; ε = 1f-6)
   @. sk_arr3 = 0
   @. sk_arr4 = 0
   @. params.usr_params.sk = 0
-
+    
   return nothing
-
 end
+
+
 # compute the  ∑_i B̂ᵢ kᵢ (k^{-2} ∑_i( kᵢ \widehat{λB} ))
 function Get_the_B∇∇⁻²∇λB_term!(B∇∇⁻²∇λBh, λ, 
                                   bx ,by ,bz,
@@ -253,7 +265,7 @@ function ComputeδB!(λ, Ax, Ay, Az,
   # define the sketch variables
   λbᵢ = vars.nonlin1
   δAxh, δAyh, δAzh = λBxh ,λByh ,λBzh
-
+  
   kx,ky,kz = grid.kr, grid.l, grid.m
   for (bᵢ, λbᵢh, Aᵢ, λAᵢh) ∈ zip((bx, by, bz), (λBxh ,λByh ,λBzh), (Ax, Ay, Az), (λAxh ,λAyh ,λAzh))
     @. λbᵢ = λ*bᵢ
@@ -269,12 +281,19 @@ function ComputeδB!(λ, Ax, Ay, Az,
   @. δAzh = im*(kx.*λAyh .- ky.*λAxh) + λBzh
 
   # B = B + ∇×(δA)
-  @. bxh += im*(ky*δAzh - kz*δAyh)
-  @. byh += im*(kz*δAxh - kx*δAzh)
-  @. bzh += im*(kx*δAyh - ky*δAxh)
-  dealias!(bxh, grid)
-  dealias!(byh, grid)
-  dealias!(bzh, grid)  
-  return nothing
+  @. bxh -= im*(ky*δAzh - kz*δAyh)
+  @. byh -= im*(kz*δAxh - kx*δAzh)
+  @. bzh -= im*(kx*δAyh - ky*δAxh)
   
+  dealias!(bxh, grid)  
+  dealias!(byh, grid)
+  dealias!(bzh, grid)
+  return nothing
+end
+
+function Realvar_dealias!(A, grid::FourierFlows.ThreeDGrid; cache = [])
+  mul!(cache, grid.rfftplan, A)
+  dealias!(cache, grid)
+  ldiv!(A, grid.rfftplan, cache)
+  return nothing  
 end

@@ -92,7 +92,7 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
     mul!(Aⱼ∂ⱼBᵢh, grid.rfftplan, Aⱼ∂ⱼBᵢ)
     # final step
     @. ∂Bᵢh∂t += Aⱼ∂ⱼBᵢh
-
+    
   end
 
   return nothing
@@ -134,6 +134,9 @@ function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
   EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
+
+  #Update diffusion
+  @. N -= η*k²*sol
 
   #Update B Real Conponment
   ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))

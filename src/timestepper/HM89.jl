@@ -4,23 +4,22 @@
 # ----------
 
 struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
-  F₀    :: T
-  F₁    :: T
-  Bₘ₋₂  :: T
-  Bₘ₋₁  :: T
-  Bₘ    :: T
-  B₀    :: T
-  y     :: T
-  c     :: TL
+  F₀  :: T
+  F₁  :: T
+  B⁰  :: T
+  B¹  :: T
+  Bⁿ  :: T
+   c  :: TL
 end
 
 function HM89TimeStepper(equation, dev::Device=CPU())
-  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₂ Bₘ₋₁ Bₘ B₀ y
+  @devzeros typeof(dev) equation.T equation.dims  F₀  F₁  B⁰  B¹ Bⁿ 
 
   c = (1//3, 15//16, 8//15)
 
-  return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, c)
+  return HM89TimeStepper( F₀, F₁, B⁰, B¹, Bⁿ , c)
 end
+
 
 function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, grid)
   HM89substeps!( sol, clock, ts, equation, vars, params, grid)
@@ -34,65 +33,68 @@ end
 
 function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   # we solve the equation using the most simplist 2nd order implicit methed: trapezoidal rule method
-  # Consider the B_{n+1} = B_n + (Δt/2)*(f(y_{n+1/2})) = f(y), n is the time step n
-  # using secant method, we define g(B) = B - B₀ - (Δt/2)*f(B'), B' = B^{n+1/2} 
-  #  So that,  B_{m + 1} = B_m - g(B_m)*(B_m - B_{m-1})/(g(B_m) - g(B_{m-1})), be aware m is the iteration number m
-  # If the B_{m+1} is convergence, B_{m+1} = y_{m}
-  # We pick B_{m=0} = Euler(B₀), and B_{m=1} = RK3(B) as our first guess
+  # Consider the y_{n+1} = y_n + (Δt/2)*(f(t_n, y_n) + f(t_{n+1}, y_{n+1})) = f(y)
+  # using fix point method, we define g = y_{n+1} - f(y)
+  # note : We arrive at y_{n + 1} = y_n + (Δt)*f(t_{n+1/2}, y_{n+1/2})) 
+  # If the y_n is convergence, y_{n+1} = y_{n}
+
 #-------------------------------------------------------------------------------------------#
   # Define the function and var that will be used
   square_mean(A,B,C) =  mapreduce((x,y,z)->√(x*x+y*y+z*z),max,A,B,C)
 
   t, Δt, c  = clock.t, clock.dt, ts.c
   
-  y, B₀, xₘ, xₘ₋₁, xₘ₋₂ = ts.y, ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₋₂
+  B⁰, B¹, Bⁿ = ts.B⁰, ts.B¹, ts.Bⁿ
 
   ΔBh, ∇XJXB =  ts.F₀, ts.F₁
 
   ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
   
-  # copy B⁰ from sol and get guess of B(m=1) from LSRK3 Method
-  copyto!(B₀, sol)
+  # copy B⁰ from sol and get guess of B\^{n+1} from LSRK3 Method
+  copyto!(B⁰, sol)
   LSRK3substeps!(sol, clock, ts, equation, vars, params, grid)
   DivFreeCorrection!(sol, vars, params, grid)
-  Bₕ = sol
-
-  # define the "pointer" and set up the guess of B(m=0) from Euler Method
-  @. xₘ₋₂ = sol
-  @. Bₕ   = xₘ₋₂/2 + B₀/2
-  equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-  @. xₘ₋₁ = B₀ + Δt*∇XJXB
-
-  # delias the result before the iteration
-  dealias!(xₘ₋₂, grid)
-  dealias!(xₘ₋₁, grid)
+  copyto!( B¹,  sol)
+  dealias!(B¹, grid)
+  B_half = sol
 
   ε   = 1.0;
   err = 5e-4;
 
   while ε > err 
+    
+    # get the ∇×(J × B) term from B^{n+1/2}
+    @. B_half = (B⁰ + B¹)*0.5
+    equation.calcN!(∇XJXB, B_half, t, clock, vars, params, grid)
 
-    @. Bₕ   = xₘ₋₁/2 + B₀/2
-    equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
-    @. xₘ   = B₀ + Δt*∇XJXB
-    @. y    = xₘ₋₂ - (xₘ₋₁ .- xₘ₋₂).^2/(xₘ .- 2*xₘ₋₁ .+ xₘ₋₂)
-    @. y[isnan.(y)] = xₘ₋₂[isnan.(y)]  # Warning: this will not be the best way to solve the issue
+    # get the term B\^ n + 1 and de-alias the result to avoid aliasing error
+    @. Bⁿ = B⁰ + Δt*∇XJXB
+    dealias!(Bⁿ, grid)
 
     # compute the error
-    @. ΔBh = (y - xₘ₋₂)
-    
-    dealias!(ΔBh, grid)
+    @. ΔBh = (Bⁿ - B¹)
     ldiv!( ΔBx, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,1] ) )
     ldiv!( ΔBy, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,2] ) )
     ldiv!( ΔBz, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,3] ) ) 
     ε = square_mean(ΔBx, ΔBy, ΔBz)
 
-    # swap the vars for the next iteration
-    copyto!(xₘ₋₂, xₘ₋₁)
-    copyto!(xₘ₋₁, xₘ)
-    @show ε
-
+    # copy to Bⁿ to be B¹
+    copyto!(B¹, Bⁿ)
   end
+
+  #Compute the diffusion term and forcing using the explicit method 
+  copyto!(sol, B¹)
+  RK3linearterm!(sol, ts, clock, vars, params, grid)
+  DivFreeCorrection!(sol, vars, params, grid)
+
+  #copy the ans back to real vars
+  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
+  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
+  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
+
+  return nothing
+
+end
 
   if isinf(ε) || isnan(ε); error("No Convergence!"); end
 
@@ -193,19 +195,19 @@ function RK3linearterm!(sol, ts, clock, vars, params, grid)
   η  = params.η
   
   params.calcF!(ts.F₀, sol, t + dt, clock, vars, params, grid)
-  @. ts.F₀ -=  η*k²*sol
+  #@. ts.F₀ -=  η*k²*sol # moved into the implicit part
   @. ts.F₀ *=  dt
   @.  sol  += ts.F₀*c[1]*dt
 
   params.calcF!(ts.F₁, sol, t + dt, clock, vars, params, grid)
-  @. ts.F₁ -=  η*k²*sol
+  #@. ts.F₁ -=  η*k²*sol
   @. ts.F₁ *=  dt
   @. ts.F₁ -=  5/9*ts.F₀
   @.  sol  +=  c[2]*ts.F₁
 
   # reuse F2 = F0
   params.calcF!(ts.F₀, sol, t + dt, clock, vars, params, grid)
-  @. ts.F₀ -= η*k²*sol
+  #@. ts.F₀ -= η*k²*sol
   @. ts.F₀ *= dt
   @. ts.F₀ -= 153/128*ts.F₁
   @.   sol += c[3]*ts.F₀

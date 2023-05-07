@@ -79,7 +79,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @. Bₕ   = xₘ₋₁/2 + B₀/2
     equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
     @. xₘ   = B₀ + Δt*∇XJXB
-    @. y    = xₘ₋₂ - I*(xₘ₋₁ .- xₘ₋₂).^2/(xₘ .- 2*xₘ₋₁ .+ xₘ₋₂)
+    @. y    = xₘ₋₂ - I*(xₘ₋₁ .- xₘ₋₂).^2/(xₘ .- 2*xₘ₋₁ .+ xₘ₋₂) # Warning: this will not evolve k = 0 mode....
 
     # compute the error
     @. ΔBh = (y - xₘ₋₂)

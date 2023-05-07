@@ -11,19 +11,15 @@ struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
   Bₘ    :: T
   B₀    :: T
   y     :: T
-  I     :: T
   c     :: TL
 end
 
 function HM89TimeStepper(equation, dev::Device=CPU())
-  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₂ Bₘ₋₁ Bₘ B₀ y I
+  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₂ Bₘ₋₁ Bₘ B₀ y
 
   c = (1//3, 15//16, 8//15)
 
-  @. I = 1
-  @. I[1,1,1,:] = 0
-
-  return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, I, c)
+  return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, c)
 end
 
 function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, grid)
@@ -79,7 +75,8 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @. Bₕ   = xₘ₋₁/2 + B₀/2
     equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
     @. xₘ   = B₀ + Δt*∇XJXB
-    @. y    = xₘ₋₂ - I*(xₘ₋₁ .- xₘ₋₂).^2/(xₘ .- 2*xₘ₋₁ .+ xₘ₋₂) # Warning: this will not evolve k = 0 mode....
+    @. y    = xₘ₋₂ - (xₘ₋₁ .- xₘ₋₂).^2/(xₘ .- 2*xₘ₋₁ .+ xₘ₋₂)
+    @. y[isnan.(y)] = xₘ₋₂[isnan.(y)]  # Warning: this will not be the best way to solve the issue
 
     # compute the error
     @. ΔBh = (y - xₘ₋₂)

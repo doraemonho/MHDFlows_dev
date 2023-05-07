@@ -21,7 +21,7 @@ function HM89TimeStepper(equation, dev::Device=CPU())
   c = (1//3, 15//16, 8//15)
 
   @. I = 1
-  CUDA.@allowscalar I[1,1,1,:] = 0
+  @. I[1,1,1,:] = 0
 
   return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, I, c)
 end

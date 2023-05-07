@@ -96,21 +96,6 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
 
 end
 
-  if isinf(ε) || isnan(ε); error("No Convergence!"); end
-
-  #Compute the diffusion term and forcing using the explicit method 
-  copyto!(sol, y)
-  RK3linearterm!(sol, ts, clock, vars, params, grid)
-  DivFreeCorrection!(sol, vars, params, grid)
-
-  #copy the ans back to real vars
-  ldiv!(vars.bx, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bx_ind]))
-  ldiv!(vars.by, grid.rfftplan, deepcopy(@view sol[:, :, :, params.by_ind]))
-  ldiv!(vars.bz, grid.rfftplan, deepcopy(@view sol[:, :, :, params.bz_ind])) 
-
-  return nothing
-
-end
 
 function DivFreeCorrection!(sol, vars, params, grid)
 #= 

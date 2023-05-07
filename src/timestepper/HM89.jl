@@ -11,15 +11,19 @@ struct HM89TimeStepper{T,TL} <: FourierFlows.AbstractTimeStepper{T}
   Bₘ    :: T
   B₀    :: T
   y     :: T
+  I     :: T
   c     :: TL
 end
 
 function HM89TimeStepper(equation, dev::Device=CPU())
-  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₂ Bₘ₋₁ Bₘ B₀ y 
+  @devzeros typeof(dev) equation.T equation.dims  F₀ F₁ Bₘ₋₂ Bₘ₋₁ Bₘ B₀ y I
 
   c = (1//3, 15//16, 8//15)
 
-  return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, c)
+  @. I = 1
+  CUDA.@allowscalar I[1,1,1,:] = 0
+
+  return HM89TimeStepper( F₀, F₁, Bₘ₋₂, Bₘ₋₁, Bₘ, B₀, y, I, c)
 end
 
 function stepforward!(sol, clock, ts::HM89TimeStepper, equation, vars, params, grid)
@@ -75,10 +79,11 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
     @. Bₕ   = xₘ₋₁/2 + B₀/2
     equation.calcN!(∇XJXB, Bₕ, t, clock, vars, params, grid)
     @. xₘ   = B₀ + Δt*∇XJXB
-    @. y    = xₘ₋₂ - (xₘ₋₁ - xₘ₋₂)^2/(xₘ - 2*xₘ₋₁ + xₘ₋₂)
+    @. y    = xₘ₋₂ - I*(xₘ₋₁ .- xₘ₋₂).^2/(xₘ .- 2*xₘ₋₁ .+ xₘ₋₂)
 
     # compute the error
     @. ΔBh = (y - xₘ₋₂)
+    
     dealias!(ΔBh, grid)
     ldiv!( ΔBx, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,1] ) )
     ldiv!( ΔBy, grid.rfftplan, deepcopy( @view ΔBh[:,:,:,2] ) )

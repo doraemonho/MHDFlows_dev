@@ -51,7 +51,7 @@ function HM89substeps!(sol, clock, ts, equation, vars, params, grid)
   
   y, B₀, xₘ, xₘ₋₁, xₘ₋₂ = ts.y, ts.B₀, ts.Bₘ, ts.Bₘ₋₁, ts.Bₘ₋₂
 
-  ΔBh, ∇XJXB =  ts.F₀, ts.F₁
+  I, ΔBh, ∇XJXB =  ts.I, ts.F₀, ts.F₁
 
   ΔBx, ΔBy, ΔBz = vars.bx, vars.by, vars.bz
   

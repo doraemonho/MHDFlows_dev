@@ -33,7 +33,7 @@ end
 #  λ_{n+1} = λ_{n} - g(λ_{n})*(λ_{n} - λ_{n-1})/(g(λ_{n}) - g(λ_{n-1}))
 #
 #
-function HmCorrection1!(prob; ε = 1f-2, f₀ = 5e-1)
+function HmCorrection!(prob; ε = 1f-2, f₀ = 5e-1)
   square_mean(A,B,C) = mapreduce((x,y,z)->sqrt(x*x+y*y+z*z),+,A,B,C)/length(A)
   L2_err_max(dA) =  mapreduce(x->x*x, max, dA)
   δ(a::Int,b::Int) = ( a == b ? 1 : 0 )

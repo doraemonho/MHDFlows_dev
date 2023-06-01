@@ -107,8 +107,8 @@ function EMHD_Update!(N, sol, t, clock, vars, params, grid)
   k₁,k₂,k₃ = grid.kr,grid.l,grid.m;
   b₁, b₂, b₃  = vars.bx, vars.by, vars.bz  
   ∇XB₁, ∇XB₂, ∇XB₃  = vars.∇XB₁, vars.∇XB₂, vars.∇XB₃
-  ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁ , vars.∇XBXB₂ ,  vars.∇XBXB₃ 
-  ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁h, vars.∇XBXB₂h, vars.∇XBXB₃h 
+∇XBXB₁ , ∇XBXB₂ , ∇XBXB₃  = vars.∇XBXB₁ , vars.∇XBXB₂ ,  vars.∇XBXB₃ 
+∇XBXB₁h, ∇XBXB₂h, ∇XBXB₃h = vars.∇XBXB₁h, vars.∇XBXB₂h, vars.∇XBXB₃h 
   
   # compute the real part of ( ∇× B ) × B
   @. ∇XBXB₁ =  ∇XB₂*b₃ - ∇XB₃*b₂

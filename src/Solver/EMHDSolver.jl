@@ -142,13 +142,13 @@ function Get∇XB!(sol, vars, params, grid)
   A₃  = vars.∇XB₃
 
   # Way 2 of appling Curl
-  @. vars.∇XBᵢh = im*(k₂*B₃h - k₃*B₂h)
+  @. vars.∇XB₁h = im*(k₂*B₃h - k₃*B₂h)
   ldiv!(A₁, grid.rfftplan, deepcopy(vars.∇XB₁h))  
 
-  @. vars.∇XBⱼh = im*(k₃*B₁h - k₁*B₃h)
+  @. vars.∇XB₂h = im*(k₃*B₁h - k₁*B₃h)
   ldiv!(A₂, grid.rfftplan, deepcopy(vars.∇XB₂h))  
 
-  @. vars.∇XBₖh = im*(k₁*B₂h - k₂*B₁h)
+  @. vars.∇XB₃h = im*(k₁*B₂h - k₂*B₁h)
   ldiv!(A₃, grid.rfftplan, deepcopy(vars.∇XB₃h))  
 
   return nothing

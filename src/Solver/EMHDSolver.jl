@@ -29,8 +29,8 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   if direction == "x"
     a   = 1
     kₐ  = grid.kr
-    Aᵢ  = vars.∇XBᵢ
-    Aᵢh = vars.∇XBᵢh
+    Aᵢ  = vars.∇XB₁
+    Aᵢh = vars.∇XB₁h
     bᵢ  = vars.bx 
     bᵢh = @view sol[:,:,:,params.bx_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.bx_ind]
@@ -38,8 +38,8 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   elseif direction == "y"
     a   = 2
     kₐ  = grid.l
-    Aᵢ  = vars.∇XBⱼ
-    Aᵢh = vars.∇XBⱼh
+    Aᵢ  = vars.∇XB₂
+    Aᵢh = vars.∇XB₂h
     bᵢ  = vars.by 
     bᵢh = @view sol[:,:,:,params.by_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.by_ind]
@@ -47,8 +47,8 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   elseif direction == "z"
     a   = 3
     kₐ  = grid.m
-    Aᵢ  = vars.∇XBₖ
-    Aᵢh = vars.∇XBₖh
+    Aᵢ  = vars.∇XB₃
+    Aᵢh = vars.∇XB₃h
     bᵢ  = vars.bz 
     bᵢh = @view sol[:,:,:,params.bz_ind]
     ∂Bᵢh∂t = @view N[:,:,:,params.bz_ind]
@@ -99,6 +99,33 @@ function EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
   
 end
 
+# Advection function for EMHD update
+# ∂B/∂t  = - ∇× [ (∇× B) × B ] , assuming dᵢ/ α = 1
+# ∂Bh/∂t  = - im k ×  ((∇× B) × B)ₕ 
+function EMHD_Update!(N, sol, t, clock, vars, params, grid)
+  bᵢ, b₂, b₃  = vars.bx, vars.by, vars.bz  
+  ∇XB₁, ∇XB₂, ∇XB₃  = vars.∇XBᵢ, vars.∇XBⱼ, vars.∇XBₖ
+  ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁ , vars.∇XBXB₂ ,  vars.∇XBXB₃ 
+  ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁h, vars.∇XBXB₂h, vars.∇XBXB₃h 
+  
+  # compute the real part of ( ∇× B ) × B
+  @. ∇XBXB₁ =  ∇XB₂*b₃ - ∇XB₃*b₂
+  @. ∇XBXB₂ =  ∇XB₃*b₁ - ∇XB₁*b₃
+  @. ∇XBXB₃ =  ∇XB₁*b₂ - ∇XB₂*b₁
+
+  # compute the 
+  mul!(∇XBXB₁h, grid.rfftplan, ∇XBXB₁)
+  mul!(∇XBXB₂h, grid.rfftplan, ∇XBXB₂)
+  mul!(∇XBXB₃h, grid.rfftplan, ∇XBXB₃)
+  
+  # Compute the k × [(∇× B) × B]ₕ
+  @. N[:,:,:,params.bx_ind] = im*(k₂*∇XBXB₃h - k₃*∇XBXB₂h)
+  @. N[:,:,:,params.by_ind] = im*(k₃*∇XBXB₁h - k₁*∇XBXB₃h)
+  @. N[:,:,:,params.bz_ind] = im*(k₁*∇XBXB₂h - k₂*∇XBXB₁h)
+
+  return nothing
+
+end
 
 # Compute the ∇XB term
 function Get∇XB!(sol, vars, params, grid)
@@ -110,19 +137,19 @@ function Get∇XB!(sol, vars, params, grid)
   B₁h = @view sol[:,:,:,params.bx_ind]
   B₂h = @view sol[:,:,:,params.by_ind]
   B₃h = @view sol[:,:,:,params.bz_ind]
-  A₁  = vars.∇XBᵢ
-  A₂  = vars.∇XBⱼ
-  A₃  = vars.∇XBₖ
+  A₁  = vars.∇XB₁
+  A₂  = vars.∇XB₂
+  A₃  = vars.∇XB₃
 
   # Way 2 of appling Curl
   @. vars.∇XBᵢh = im*(k₂*B₃h - k₃*B₂h)
-  ldiv!(A₁, grid.rfftplan, deepcopy(vars.∇XBᵢh))  
+  ldiv!(A₁, grid.rfftplan, deepcopy(vars.∇XB₁h))  
 
   @. vars.∇XBⱼh = im*(k₃*B₁h - k₁*B₃h)
-  ldiv!(A₂, grid.rfftplan, deepcopy(vars.∇XBⱼh))  
+  ldiv!(A₂, grid.rfftplan, deepcopy(vars.∇XB₂h))  
 
   @. vars.∇XBₖh = im*(k₁*B₂h - k₂*B₁h)
-  ldiv!(A₃, grid.rfftplan, deepcopy(vars.∇XBₖh))  
+  ldiv!(A₃, grid.rfftplan, deepcopy(vars.∇XB₃h))  
 
   return nothing
 end
@@ -131,9 +158,10 @@ function EMHDcalcN_advection!(N, sol, t, clock, vars, params, grid)
 
   #Update B Advection
   Get∇XB!(sol, vars, params, grid)
-  EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
-  EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
-  EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
+  EMHD_Update!(N, sol, t, clock, vars, params, grid)
+  #EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="x")
+  #EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="y")
+  #EMHD_BᵢUpdate!(N, sol, t, clock, vars, params, grid;direction="z")
 
   #Update diffusion
   @. N -= params.η*grid.Krsq*sol

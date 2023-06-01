@@ -66,17 +66,30 @@ struct EMVars{Aphys, Atrans, usr_var} <: MHDVars
     "z-component of B-field"
         bz :: Aphys
     "x-component of Curl B-field"
-        ∇XBᵢ :: Aphys
+        ∇XB₁ :: Aphys
     "y-component of Curl B-field"
-        ∇XBⱼ :: Aphys
+        ∇XB₂ :: Aphys
     "z-component of Curl B-field"
-        ∇XBₖ :: Aphys
+        ∇XB₃ :: Aphys
+    "x-component of (∇XB)XB"
+        ∇XBXB₁ :: Aphys
+    "y-component of (∇XB)XB"
+        ∇XBXB₂ :: Aphys
+    "z-component of (∇XB)XB"
+        ∇XBXB₃ :: Aphys
+
     "x-component of fourier Curl B-field"
-        ∇XBᵢh :: Atrans
+        ∇XB₁h :: Atrans
     "y-component of fourier Curl B-field"
-        ∇XBⱼh :: Atrans
+        ∇XB₂h :: Atrans
     "z-component of fourier Curl B-field"
-        ∇XBₖh :: Atrans    
+        ∇XB₃h :: Atrans    
+    "x-component of fourier (∇XB)XB"
+        ∇XBXB₁h :: Atrans
+    "y-component of fourier (∇XB)XB"
+        ∇XBXB₂h :: Atrans
+    "z-component of fourier (∇XB)XB"
+        ∇XBXB₃h :: Atrans
 
     # Temperatory Cache 
     "Non-linear term 1"

@@ -27,12 +27,12 @@ end
 function SetEMHDVars(::Dev, grid, usr_vars) where Dev
   T = eltype(grid)
     
-  @devzeros Dev T (grid.nx, grid.ny, grid.nz) bx  by bz ∇XBx ∇XBy ∇XBz nonlin1
-  @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm)  nonlinh1 ∇XBxh ∇XByh ∇XBzh
+  @devzeros Dev T (grid.nx, grid.ny, grid.nz) bx  by bz ∇XBx ∇XBy ∇XBz ∇XBXB₁h ∇XBXB₂h ∇XBXB₃h nonlin1
+  @devzeros Dev Complex{T} (grid.nkr, grid.nl, grid.nm)  nonlinh1 ∇XBxh ∇XByh ∇XBzh ∇XBXB₁h ∇XBXB₂h ∇XBXB₃h
   
   return EMVars(bx,  by,  bz,
-                ∇XBx, ∇XBy, ∇XBz,
-                ∇XBxh, ∇XByh, ∇XBzh,
+                ∇XBx, ∇XBy, ∇XBz, ∇XBXB₁, ∇XBXB₂, ∇XBXB₃,
+                ∇XBxh, ∇XByh, ∇XBzh, ∇XBXB₁h, ∇XBXB₂h, ∇XBXB₃h,
                 nonlin1, nonlinh1, usr_vars);
 end
 

@@ -104,7 +104,7 @@ end
 # ∂Bh/∂t  = - im k ×  ((∇× B) × B)ₕ 
 function EMHD_Update!(N, sol, t, clock, vars, params, grid)
   bᵢ, b₂, b₃  = vars.bx, vars.by, vars.bz  
-  ∇XB₁, ∇XB₂, ∇XB₃  = vars.∇XBᵢ, vars.∇XBⱼ, vars.∇XBₖ
+  ∇XB₁, ∇XB₂, ∇XB₃  = vars.∇XB₁, vars.∇XB₂, vars.∇XB₃
   ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁ , vars.∇XBXB₂ ,  vars.∇XBXB₃ 
   ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁h, vars.∇XBXB₂h, vars.∇XBXB₃h 
   

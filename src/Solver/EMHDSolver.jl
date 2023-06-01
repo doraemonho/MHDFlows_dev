@@ -103,7 +103,9 @@ end
 # ∂B/∂t  = - ∇× [ (∇× B) × B ] , assuming dᵢ/ α = 1
 # ∂Bh/∂t  = - im k ×  ((∇× B) × B)ₕ 
 function EMHD_Update!(N, sol, t, clock, vars, params, grid)
-  bᵢ, b₂, b₃  = vars.bx, vars.by, vars.bz  
+  # define the vars
+  k₁,k₂,k₃ = grid.kr,grid.l,grid.m;
+  b₁, b₂, b₃  = vars.bx, vars.by, vars.bz  
   ∇XB₁, ∇XB₂, ∇XB₃  = vars.∇XB₁, vars.∇XB₂, vars.∇XB₃
   ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁ , vars.∇XBXB₂ ,  vars.∇XBXB₃ 
   ∇XBXB₁, ∇XBXB₂, ∇XBXB₃ = vars.∇XBXB₁h, vars.∇XBXB₂h, vars.∇XBXB₃h 
@@ -113,12 +115,12 @@ function EMHD_Update!(N, sol, t, clock, vars, params, grid)
   @. ∇XBXB₂ =  ∇XB₃*b₁ - ∇XB₁*b₃
   @. ∇XBXB₃ =  ∇XB₁*b₂ - ∇XB₂*b₁
 
-  # compute the 
+  # transfer to k-space
   mul!(∇XBXB₁h, grid.rfftplan, ∇XBXB₁)
   mul!(∇XBXB₂h, grid.rfftplan, ∇XBXB₂)
   mul!(∇XBXB₃h, grid.rfftplan, ∇XBXB₃)
   
-  # Compute the k × [(∇× B) × B]ₕ
+  # Compute the k × [(∇× B) × B]ₕ in k-space
   @. N[:,:,:,params.bx_ind] = im*(k₂*∇XBXB₃h - k₃*∇XBXB₂h)
   @. N[:,:,:,params.by_ind] = im*(k₃*∇XBXB₁h - k₁*∇XBXB₃h)
   @. N[:,:,:,params.bz_ind] = im*(k₁*∇XBXB₂h - k₂*∇XBXB₁h)

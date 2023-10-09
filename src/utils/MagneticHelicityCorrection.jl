@@ -17,7 +17,7 @@ function construct_function_for_struct(::Dev,nx::Int,ny::Int,nz::Int; T = Float3
   @devzeros Dev         T  (            nx , ny, nz    ) λₙ
   @devzeros Dev         T  (            nx , ny, nz, 9 ) sk
   @devzeros Dev         T  (            nx , ny, nz, 3 , 3 ) Dᵢⱼ
-  Hm = Hm_vars(λₙ, H₀h, sk, Dᵢⱼ)
+  Hm = Hm_vars(λₙ, H₀h, sk, Dᵢⱼ, T[])
 
   return Hm, HmCorrection!
 end

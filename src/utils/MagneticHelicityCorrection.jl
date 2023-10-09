@@ -3,11 +3,12 @@
 # ----------
 # Note : Have to check if any sketch variables is overlaped
 # Are A computed correctly?
-mutable struct Hm_vars{Atrans,Aphys,Aphys4D,Aphys5D}
+mutable struct Hm_vars{Atrans,Aphys,Aphys4D,Aphys5D,T}
   λₙ  :: Aphys
   H₀h :: Atrans
   sk  :: Aphys4D
   Dᵢⱼ :: Aphys5D
+  δE  :: Array{T,1}
 end
 
 function construct_function_for_struct(::Dev,nx::Int,ny::Int,nz::Int; T = Float32) where Dev

@@ -245,7 +245,7 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
   B_dot_∇Φ   =  @view params.usr_params.Dᵢⱼ[:,:,:,2,2]
   ∇Φᵢ  = @view params.usr_params.Dᵢⱼ[:,:,:,2,1]
 
-  # compute Φ from  ∂H/∂t = -B ⋅ E + (∇ × E) ⋅ A
+  # compute Φ from  ∂H/∂t = -B ⋅ E + (∇ × E) ⋅ A, but neglibigle for Coulomb guage
   # since ∇ × E = ∇ × ∇ Φ = 0, the only term to compute will become
   # - B ⋅ E = - B ⋅ ∇ Φ
   @. Φh = 0
@@ -265,6 +265,13 @@ function HUpdate!(N, sol, t, clock, vars, params, grid)
   mul!(B_dot_∇Φh, grid.rfftplan,B_dot_∇Φ)
   @. ∂H∂t -= B_dot_∇Φh
 
+  #Compute the diffusion term  - 2 η J ⋅ B
+  diff_term   = B_dot_E
+  diff_term_h = B_dot_Eh
+  @. diff_term = Jx * bx + Jy * by + Jz * bz
+  mul!(diff_term_h, grid.rfftplan,diff_term)
+  @. ∂H∂t += - 2 * params.η * diff_term_h
+  
   return nothing 
 
 end
